@@ -1,0 +1,10 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>模拟法庭 · 场景设计</title><link rel="stylesheet" href="scene.css"></head>
+<body>
+<header><div><span class="eyebrow">MAIC · 场景设计预览</span><h1>模拟法庭</h1></div><div class="context"><span id="caseName"></span><span id="speaker" aria-live="polite"></span></div></header>
+<main><section class="court" aria-label="模拟法庭席位与证据"><img class="background" src="assets/courtroom-background-flat.png" alt="扁平木质法庭，左右双方长桌、中央证据区与空置旁听席"><div id="labels"></div><div id="roles"></div><section class="evidence" aria-label="当前出示的证据"><div class="evidence-heading"><span>证据展示</span><small>点击查看原文</small></div><div id="evidenceList"></div></section><span class="audience">旁听席</span></section></main>
+<footer><details open><summary>预览控制 <span>仅用于检查场景效果</span></summary><div class="controls"><label>案件示例<select id="caseSelect"><option value="civil">民事 · 合同争议</option><option value="criminal">刑事 · 教学演练</option><option value="simple">精简 · 单争点演练</option></select></label><button id="next">演示下一位发言</button><button id="clear">清除发言状态</button><label class="check"><input id="peer" type="checkbox" checked>模拟学生参与</label><label class="upload">试用自定义头像<input id="avatarFile" type="file" accept="image/*"></label><button id="resetAvatar">恢复预设头像</button></div><p id="previewState">示例数据用于展示；角色分配和发言顺序由接入后的课堂调度提供。</p></details></footer>
+<dialog id="viewer" aria-labelledby="viewerTitle"><div class="viewer-header"><div><small id="viewerKind"></small><h2 id="viewerTitle"></h2></div><button id="closeViewer" aria-label="关闭证据详情">✕</button></div><div class="zoom-tools"><button id="zoomOut" aria-label="缩小">−</button><output id="zoomValue">100%</output><button id="zoomIn" aria-label="放大">＋</button><button id="zoomReset">适合阅读</button></div><div class="viewer-body" id="viewerBody"><div id="viewerContent"></div></div></dialog>
+<script src="scene.js"></script>
+</body></html>
