@@ -8,6 +8,12 @@ const CueUserParams = Type.Object({
       description: 'Optional short prompt for handing the turn back to the user.',
     }),
   ),
+  courtroomTopic: Type.Optional(
+    Type.String({
+      description:
+        'When enabled by the director prompt, the single narrow Chinese legal-exam issue to offer as an optional mock-trial practice after teaching.',
+    }),
+  ),
 });
 
 type CueUserParams = Static<typeof CueUserParams>;
@@ -23,6 +29,7 @@ export function buildCueUserTool(opts: {
   canCueUser?: () => boolean;
   cueUserSkipReason?: CueUserSkipReason;
   isSessionClosed?: () => boolean;
+  onCourtroomTopic?: (topic: string) => void;
 }): AgentTool<typeof CueUserParams> {
   return {
     name: 'cue_user',
@@ -66,6 +73,9 @@ export function buildCueUserTool(opts: {
         fromAgentId: opts.getLastAgentId(),
         prompt: params.prompt,
       });
+      if (emitted && typeof params.courtroomTopic === 'string') {
+        opts.onCourtroomTopic?.(params.courtroomTopic);
+      }
       return {
         content: [
           {

@@ -14,6 +14,7 @@ export type PBLRoleType =
 export type PBLProficiency = '' | 'beginner' | 'intermediate' | 'advanced';
 export type PBLAssignee = 'user';
 export type PBLUiPhase = 'hero' | 'generating' | 'workspace' | 'completed';
+export type PBLWorkspacePresentation = 'standard' | 'courtroom';
 
 export interface PBLRole {
   id: string;
@@ -130,6 +131,8 @@ export interface PBLProject {
   language: string;
   languageDirective?: string;
   scenario?: PBLScenarioConfig;
+  workspacePresentation?: PBLWorkspacePresentation;
+  courtroomPractice?: { caseId: string; returnStageId?: string };
   schemaVersion?: number;
   proficiency: PBLProficiency;
   /** Seeded to the canonical `active` value in stored documents. */

@@ -249,4 +249,24 @@ describe('Evaluator agent — milestone/final JSON-only output', () => {
     expect(patch.evaluation.whatsNext).toBe('下一步可以加入新增和删除键值对的功能。');
     expect(patch.evaluation.stars).toBe(4.5);
   });
+
+  it('keeps courtroom reasoning feedback but discards an interaction star rating', async () => {
+    const project = mkProject();
+    project.workspacePresentation = 'courtroom';
+    project.scenario = {
+      setting: '合同交付争议',
+      characters: [{ id: 'opponent', name: '乙方', persona: '不同立场' }],
+    };
+    const feedback = '你指出材料 1 只有初稿期限。补写最终交付义务何时到期。';
+    const events = await collectEvents(
+      runFinalEvaluation({
+        project,
+        languageModel: scriptedModel(JSON.stringify({ feedback, stars: 5 })),
+      }),
+    );
+    const patch = evaluationPatch(events);
+    if (patch?.kind !== 'evaluation') throw new Error('missing courtroom feedback');
+    expect(patch.evaluation.feedback).toBe(feedback);
+    expect(patch.evaluation.stars).toBeUndefined();
+  });
 });

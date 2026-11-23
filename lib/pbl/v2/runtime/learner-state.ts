@@ -43,6 +43,7 @@ export interface PBLLearnerThreadState {
 }
 
 export interface PBLLearnerState {
+  workspacePresentationOverride?: PBLProjectV2['workspacePresentationOverride'];
   uiPhase: PBLUiPhase;
   status: PBLProjectStatus;
   milestones: PBLLearnerMilestoneState[];
@@ -120,6 +121,7 @@ export function extractLearnerState(project: PBLProjectV2): PBLLearnerState {
   assignOptional(state, 'pendingHandover', project.pendingHandover);
   assignOptional(state, 'pendingTaskCompletion', project.pendingTaskCompletion);
   assignOptional(state, 'runtimeResetEpoch', project.runtimeResetEpoch);
+  assignOptional(state, 'workspacePresentationOverride', project.workspacePresentationOverride);
   return omitUndefinedObjectMembers(state);
 }
 
@@ -153,6 +155,7 @@ export function stripToDesignTemplate(project: PBLProjectV2): PBLProjectV2 {
   template.pendingHandover = undefined;
   template.pendingTaskCompletion = undefined;
   template.pendingOpenTaskPriorQuizResults = undefined;
+  template.workspacePresentationOverride = undefined;
 
   template.threads = template.threads.map(
     (thread): PBLAgentThread => ({
@@ -190,6 +193,7 @@ export function applyLearnerState(
   next.runtimeResetEpoch = learnerState.runtimeResetEpoch;
   next.pendingHandover = clone(learnerState.pendingHandover);
   next.pendingTaskCompletion = clone(learnerState.pendingTaskCompletion);
+  next.workspacePresentationOverride = learnerState.workspacePresentationOverride;
 
   const assessment = usableAssessment(learnerState.proficiencyAssessment);
   if (assessment) {

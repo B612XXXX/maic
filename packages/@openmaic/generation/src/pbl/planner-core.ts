@@ -197,6 +197,10 @@ export function buildScenarioDesignBlock(
     'This PBL is a **role-play scenario**: the learner will step into a concrete situation and interact in-character with character(s) played by a separate Simulator agent. You author the WHOLE scenario now (it is frozen into the package); the runtime only produces the live dialogue. Two rules above all: (a) the premise is **given and concrete**, introduced to the learner by the Instructor — the learner must NEVER be asked to guess it; (b) every task must serve the real learning goal (how to do the thing well), not meta-guessing.',
     '',
     brief ? `Scenario brief from the platform: ${brief}\n` : '',
+    pblConfig.presentation
+      ? `The platform chose workspace presentation: ${pblConfig.presentation}. Keep that choice.`
+      : '',
+    'For a courtroom exercise, author the shared factual case documents at preparation before any learner response. Every party reads the same documents. Do not add undisclosed facts, fictitious citations, or the answer. Select courtroom only for this kind of exercise.',
     '### Step A — fully author the scenario with `set_scenario(...)`',
     'Call **exactly once, right after `set_project_info` and before any `add_milestone`**:',
     '- `setting`: the concrete overall premise / what is going on (in the project language).',

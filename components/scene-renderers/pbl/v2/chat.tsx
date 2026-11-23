@@ -62,6 +62,7 @@ import {
 } from './protocol-markers';
 
 interface Props {
+  readonly courtroom?: boolean;
   readonly project: PBLProjectV2;
   readonly onProjectChange: (next: PBLProjectV2) => void;
   readonly agentName?: string;
@@ -134,7 +135,9 @@ export function PBLV2Chat({
   instructorStreaming,
   onInstructorStreamingChange,
   externalStream,
+  courtroom = false,
 }: Props) {
+  const [courtHistoryOpen, setCourtHistoryOpen] = useState(false);
   const [input, setInput] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const scrollEndRef = useRef<HTMLDivElement>(null);
@@ -190,6 +193,8 @@ export function PBLV2Chat({
   // endpoint would return NO_ACTIVE_MICROTASK — gate the input here and
   // point the learner at the Continue button instead.
   const handoverPending = !!project.pendingHandover && !project.pendingHandover.consumed;
+  const showCourtHistory =
+    courtHistoryOpen || !!error || !!submissionEvaluationStatus || handoverPending;
 
   /**
    * Handler for the MilestoneCard's "继续到下一阶段" button.
@@ -527,8 +532,32 @@ export function PBLV2Chat({
   const agentIntro = instructorIntroText(instructorRole);
 
   return (
-    <div className="flex h-full flex-col overflow-hidden">
-      <main className="pbl-v2-scroll-fade flex-1 space-y-3 overflow-y-auto px-6 py-5">
+    <div
+      className="flex min-h-0 flex-col overflow-hidden"
+      style={{ height: courtroom ? (showCourtHistory ? 'min(40vh, 340px)' : 'auto') : '100%' }}
+    >
+      {courtroom && (
+        <div className="flex items-center justify-between px-5 pt-2 text-xs text-muted-foreground">
+          <span className="mr-3 min-w-0 truncate" title={project.scenario?.learnerRole}>
+            正式发言 · {project.scenario?.learnerRole ?? '代理人'}
+          </span>
+          <button
+            type="button"
+            aria-expanded={showCourtHistory}
+            disabled={!!error || !!submissionEvaluationStatus || handoverPending}
+            onClick={() => setCourtHistoryOpen((open) => !open)}
+            className="rounded px-2 py-1 text-primary hover:bg-muted"
+          >
+            {showCourtHistory ? '收起庭审记录' : '展开庭审记录'}
+          </button>
+        </div>
+      )}
+      <main
+        className={cn(
+          'pbl-v2-scroll-fade min-h-0 flex-1 space-y-3 overflow-y-auto px-6 py-5',
+          courtroom && !showCourtHistory && 'hidden',
+        )}
+      >
         {messages.length === 0 && !draftAssistant && !streamActive && (
           <EmptyChatPlaceholder agentName={displayName} />
         )}
@@ -569,14 +598,14 @@ export function PBLV2Chat({
             const feedback = stripTailForDisplay(ev.feedback);
             return (
               <div key={ev.id} className="flex justify-start">
-                <div className="pbl-v2-task-review-shell max-w-[90%] rounded-[22px] px-4 py-3 text-sm text-slate-800">
-                  <div className="mb-1 text-[10px] uppercase tracking-wider text-violet-700">
+                <div className="pbl-v2-task-review-shell max-w-[90%] rounded-[22px] px-4 py-3 text-sm text-foreground">
+                  <div className="mb-1 text-[10px] uppercase tracking-wider text-primary">
                     {displayName} · {t('pbl.v2.taskEvalCard.title')}
                   </div>
                   {feedback && (
                     <MarkdownText
                       content={feedback}
-                      className="pbl-v2-light-card-markdown pbl-v2-task-review-markdown text-slate-700 prose-p:text-slate-700 prose-strong:text-slate-900"
+                      className="pbl-v2-light-card-markdown pbl-v2-task-review-markdown text-foreground prose-p:text-foreground prose-strong:text-foreground"
                     />
                   )}
                   <TaskEvaluationCard evaluation={ev} className="mt-3" />
@@ -644,7 +673,7 @@ export function PBLV2Chat({
         )}
 
         {error && (
-          <div className="flex items-start justify-between gap-2 rounded-xl border border-destructive/40 bg-destructive/15 px-3 py-2 text-xs text-red-200">
+          <div className="flex items-start justify-between gap-2 rounded-xl border border-destructive/40 bg-destructive/15 px-3 py-2 text-xs text-red-700">
             <span>{error}</span>
             <button
               onClick={clearError}
@@ -659,7 +688,7 @@ export function PBLV2Chat({
       </main>
 
       <footer
-        className="border-t border-cyan-100/[0.11] bg-[#101b32]/82 px-4 py-3 backdrop-blur"
+        className="border-t border-border bg-[#f9f2e8]/82 px-4 py-3 backdrop-blur"
         onMouseMove={
           handoverPending ? (e) => setHandoverHintPos({ x: e.clientX, y: e.clientY }) : undefined
         }
@@ -676,14 +705,14 @@ export function PBLV2Chat({
             hints / suggested-reply buttons inline: in the act model beats don't
             advance, so an inline beat-bound strip would be frozen on the first
             beat. The right panel is the single, act-level source of guidance. */}
-        {isRoleplay && !handoverPending && !projectCompleted && (
+        {isRoleplay && !courtroom && !handoverPending && !projectCompleted && (
           <div className="mb-2 flex items-center gap-1.5 px-1 text-[11px] leading-snug text-muted-foreground/80">
-            <Lightbulb className="h-3.5 w-3.5 shrink-0 text-violet-200/70" />
+            <Lightbulb className="h-3.5 w-3.5 shrink-0 text-primary" />
             <span>{t('pbl.v2.chat.guidancePointer')}</span>
           </div>
         )}
-        <div className="flex items-center gap-2 rounded-2xl border border-cyan-100/[0.13] bg-slate-700/[0.26] px-3 py-2 shadow-[0_12px_34px_rgba(6,16,34,0.28)] transition-all focus-within:border-primary/70 focus-within:bg-slate-700/[0.34] focus-within:shadow-[0_0_0_1px_rgba(157,140,255,0.28),0_16px_40px_rgba(6,16,34,0.30)]">
-          <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-cyan-100/[0.12] bg-cyan-100/[0.06] text-muted-foreground">
+        <div className="flex items-center gap-2 rounded-2xl border border-border bg-card px-3 py-2 shadow-[0_12px_34px_rgba(104,67,25,0.08)] transition-all focus-within:border-primary/70 focus-within:bg-card focus-within:shadow-[0_0_0_1px_rgba(163,108,38,0.28),0_16px_40px_rgba(104,67,25,0.08)]">
+          <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-border bg-primary/10 text-muted-foreground">
             <MessageSquare className="h-3.5 w-3.5" />
           </div>
           <textarea
@@ -698,7 +727,9 @@ export function PBLV2Chat({
                 ? t('pbl.v2.chat.placeholderCompleted')
                 : handoverPending
                   ? t('pbl.v2.chat.handoverHint')
-                  : t('pbl.v2.chat.placeholder', { name: displayName })
+                  : courtroom
+                    ? '请输入你的庭审发言…'
+                    : t('pbl.v2.chat.placeholder', { name: displayName })
             }
             className={cn(
               'flex-1 resize-none bg-transparent text-sm leading-6',
@@ -725,7 +756,7 @@ export function PBLV2Chat({
             aria-label={t('pbl.v2.chat.send')}
             className={cn(
               'shrink-0 rounded-xl h-9 w-9 flex items-center justify-center',
-              'bg-primary text-primary-foreground shadow-[0_0_24px_rgba(155,124,255,0.35)] hover:opacity-90 transition-opacity',
+              'bg-primary text-primary-foreground shadow-[0_0_24px_rgba(163,108,38,0.35)] hover:opacity-90 transition-opacity',
               'disabled:opacity-40 disabled:cursor-not-allowed',
             )}
           >
@@ -738,7 +769,7 @@ export function PBLV2Chat({
       </footer>
       {handoverPending && handoverHintPos && (
         <div
-          className="pointer-events-none fixed z-50 max-w-[220px] rounded-md border border-violet-300/40 bg-slate-900/95 px-2.5 py-1.5 text-[11px] font-medium text-violet-100 shadow-[0_8px_24px_rgba(6,16,34,0.45)]"
+          className="pointer-events-none fixed z-50 max-w-[220px] rounded-md border border-border bg-card px-2.5 py-1.5 text-[11px] font-medium text-primary shadow-[0_8px_24px_rgba(104,67,25,0.08)]"
           style={{ left: handoverHintPos.x + 14, top: Math.max(8, handoverHintPos.y - 34) }}
         >
           {t('pbl.v2.chat.handoverHint')}
@@ -785,7 +816,7 @@ function SubmissionEvaluationBubble({
   }
   return (
     <div className="flex justify-start">
-      <div className="max-w-[90%] rounded-xl border border-primary/30 bg-primary/[0.12] px-4 py-3 text-sm shadow-[0_12px_30px_rgba(6,16,34,0.22)]">
+      <div className="max-w-[90%] rounded-xl border border-primary/30 bg-primary/[0.12] px-4 py-3 text-sm shadow-[0_12px_30px_rgba(104,67,25,0.08)]">
         <div className="flex items-center gap-2 text-[10px] uppercase tracking-wider text-primary mb-2">
           <CheckCircle2 className="w-3.5 h-3.5" />
           {t('pbl.v2.chat.submitted')}
@@ -841,7 +872,7 @@ function StreamingDraft({
   if (simPhase === 'narration') {
     return (
       <div className="flex justify-center py-1.5">
-        <div className="flex items-center gap-2 rounded-xl border border-cyan-100/[0.10] bg-slate-100/[0.05] px-4 py-2 text-[13px] italic text-muted-foreground">
+        <div className="flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2 text-[13px] italic text-muted-foreground">
           <span>{t('pbl.v2.chat.narrating')}</span>
           <ThinkingDots />
         </div>
@@ -851,17 +882,17 @@ function StreamingDraft({
   if (status === 'eval-task') {
     return (
       <div className="flex justify-start">
-        <div className="pbl-v2-task-review-shell max-w-[90%] animate-in fade-in-0 rounded-[22px] px-4 py-3 text-sm text-slate-800 duration-300">
-          <div className="mb-1 text-[10px] uppercase tracking-wider text-violet-700">{label}</div>
+        <div className="pbl-v2-task-review-shell max-w-[90%] animate-in fade-in-0 rounded-[22px] px-4 py-3 text-sm text-foreground duration-300">
+          <div className="mb-1 text-[10px] uppercase tracking-wider text-primary">{label}</div>
           {hasTokens ? (
             <MarkdownText
               content={streamingEvaluationPreview(displayDraft)}
-              className="pbl-v2-light-card-markdown pbl-v2-task-review-markdown text-slate-700 prose-p:text-slate-700 prose-strong:text-slate-900"
+              className="pbl-v2-light-card-markdown pbl-v2-task-review-markdown text-foreground prose-p:text-foreground prose-strong:text-foreground"
             />
           ) : (
-            <div className="flex items-start gap-2 text-slate-600">
+            <div className="flex items-start gap-2 text-foreground">
               <ThinkingDots tone="violet" />
-              <div className="pt-0.5 text-xs leading-relaxed text-slate-500">
+              <div className="pt-0.5 text-xs leading-relaxed text-muted-foreground">
                 {submissionMicrotaskTitle
                   ? t('pbl.v2.chat.readingSubmissionWithTitle', { title: submissionMicrotaskTitle })
                   : t('pbl.v2.chat.readingSubmission')}
@@ -876,21 +907,21 @@ function StreamingDraft({
 
   if (status === 'eval-milestone') {
     return (
-      <div className="relative animate-in fade-in-0 overflow-hidden rounded-2xl border border-violet-200/85 bg-[linear-gradient(145deg,rgba(252,250,255,0.98)_0%,rgba(238,242,255,0.94)_48%,rgba(232,250,255,0.96)_100%)] p-5 text-slate-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.92),0_22px_58px_rgba(8,18,38,0.30),0_0_0_1px_rgba(139,92,246,0.10),0_0_42px_rgba(34,211,238,0.10)] ring-1 ring-violet-300/20 duration-300">
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-violet-500 via-indigo-500 to-cyan-400" />
-        <div className="relative mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-violet-700">
+      <div className="relative animate-in fade-in-0 overflow-hidden rounded-2xl border border-border bg-[linear-gradient(145deg,rgba(255,251,242,0.98)_0%,rgba(249,240,223,0.94)_48%,rgba(232,250,255,0.96)_100%)] p-5 text-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.92),0_22px_58px_rgba(8,18,38,0.30),0_0_0_1px_rgba(163,108,38,0.1),0_0_42px_rgba(192,148,82,0.10)] ring-1 ring-primary/25 duration-300">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-amber-500 via-orange-500 to-cyan-400" />
+        <div className="relative mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-primary">
           {label}
         </div>
         {hasTokens ? (
           <MarkdownText
             content={streamingEvaluationPreview(displayDraft)}
-            className="pbl-v2-light-card-markdown text-slate-700 prose-p:text-slate-700 prose-strong:text-slate-900 prose-li:marker:text-violet-500"
+            className="pbl-v2-light-card-markdown text-foreground prose-p:text-foreground prose-strong:text-foreground prose-li:marker:text-primary"
           />
         ) : (
           <ThinkingDots tone="violet" />
         )}
         {handover && (
-          <div className="relative mt-3 border-t border-violet-200/80 pt-2 text-xs text-slate-500">
+          <div className="relative mt-3 border-t border-border pt-2 text-xs text-muted-foreground">
             {t('pbl.v2.chat.milestoneFeedbackPending')}
           </div>
         )}
@@ -902,7 +933,7 @@ function StreamingDraft({
   if (status === 'eval-final') {
     return (
       <div className="space-y-3">
-        <div className="animate-in fade-in-0 rounded-xl border border-cyan-100/[0.12] bg-slate-800/[0.48] px-4 py-3 text-sm shadow-[0_12px_30px_rgba(6,16,34,0.22)] duration-300">
+        <div className="animate-in fade-in-0 rounded-xl border border-border bg-card px-4 py-3 text-sm shadow-[0_12px_30px_rgba(104,67,25,0.08)] duration-300">
           <div className="mb-1 text-[10px] uppercase text-muted-foreground">{label}</div>
           {hasTokens ? (
             <MarkdownText content={streamingEvaluationPreview(displayDraft)} />
@@ -953,24 +984,24 @@ function RoleplayHistoryBlock({
   readonly title: string;
 }) {
   return (
-    <div className="rounded-2xl border border-violet-300/25 bg-violet-500/[0.06]">
+    <div className="rounded-2xl border border-border bg-primary/10">
       <button
         type="button"
         onClick={onToggle}
         aria-expanded={open}
-        className="flex w-full items-center gap-2 rounded-2xl px-4 py-3 text-left transition-colors hover:bg-violet-500/[0.10]"
+        className="flex w-full items-center gap-2 rounded-2xl px-4 py-3 text-left transition-colors hover:bg-primary/10"
       >
-        <Drama className="h-4 w-4 shrink-0 text-violet-200/90" />
-        <span className="flex-1 text-sm font-semibold text-violet-50">{title}</span>
-        <span className="text-[11px] text-violet-200/70">{messages.length}</span>
+        <Drama className="h-4 w-4 shrink-0 text-primary" />
+        <span className="flex-1 text-sm font-semibold text-primary">{title}</span>
+        <span className="text-[11px] text-primary">{messages.length}</span>
         {open ? (
-          <ChevronDown className="h-4 w-4 shrink-0 text-violet-200/80" />
+          <ChevronDown className="h-4 w-4 shrink-0 text-primary" />
         ) : (
-          <ChevronRight className="h-4 w-4 shrink-0 text-violet-200/80" />
+          <ChevronRight className="h-4 w-4 shrink-0 text-primary" />
         )}
       </button>
       {open && (
-        <div className="space-y-3 border-t border-violet-300/15 px-4 py-4">
+        <div className="space-y-3 border-t border-border px-4 py-4">
           {messages.map((m) => (
             <MessageBubble key={m.id} message={m} agentName="" characters={characters} />
           ))}
@@ -1002,7 +1033,7 @@ function MessageBubble({
     if (!narration) return null;
     return (
       <div className="flex justify-center py-1.5">
-        <div className="max-w-[82%] rounded-xl border border-cyan-100/[0.10] bg-slate-100/[0.05] px-4 py-2 text-center text-[13px] italic leading-relaxed text-muted-foreground">
+        <div className="max-w-[82%] rounded-xl border border-border bg-card px-4 py-2 text-center text-[13px] italic leading-relaxed text-muted-foreground">
           {narration}
         </div>
       </div>
@@ -1019,7 +1050,7 @@ function MessageBubble({
     return (
       <div className="flex justify-start">
         <CharacterAvatar character={character} name={name} />
-        <div className="ml-2 max-w-[85%] rounded-2xl border border-amber-200/20 bg-amber-100/[0.06] px-4 py-3 text-sm text-card-foreground shadow-[0_12px_30px_rgba(6,16,34,0.22)]">
+        <div className="ml-2 max-w-[85%] rounded-2xl border border-amber-200/20 bg-amber-100/[0.06] px-4 py-3 text-sm text-card-foreground shadow-[0_12px_30px_rgba(104,67,25,0.08)]">
           <div className="mb-1 text-[10px] uppercase tracking-wider text-amber-200/80">{name}</div>
           <MarkdownText content={content} />
         </div>
@@ -1035,7 +1066,7 @@ function MessageBubble({
     const label = message.content.slice(TASK_DIVIDER_PREFIX.length).trim();
     return (
       <div className="flex justify-center py-1">
-        <div className="rounded-full border border-slate-200/70 bg-slate-100/90 px-3 py-1 text-[11px] font-medium text-slate-600 shadow-[0_10px_24px_rgba(6,16,34,0.18)]">
+        <div className="rounded-full border border-slate-200/70 bg-card px-3 py-1 text-[11px] font-medium text-foreground shadow-[0_10px_24px_rgba(104,67,25,0.08)]">
           {label}
         </div>
       </div>
@@ -1052,12 +1083,12 @@ function MessageBubble({
       <div className="flex items-center justify-center py-3" aria-label={label}>
         <div className="flex min-w-[52%] max-w-[90%] items-center gap-3">
           <div className="h-px flex-1 bg-gradient-to-r from-transparent via-violet-200/70 to-cyan-200/70" />
-          <div className="relative rounded-full border border-violet-200/70 bg-gradient-to-r from-violet-50/95 via-indigo-50/90 to-cyan-50/95 px-4 py-1.5 text-[11px] font-semibold text-violet-700 shadow-[0_12px_34px_rgba(55,48,163,0.24)]">
-            <span className="absolute -left-1 top-1/2 h-2 w-2 -translate-y-1/2 rounded-full bg-violet-400 shadow-[0_0_10px_rgba(167,139,250,0.48)]" />
-            <span className="absolute -right-1 top-1/2 h-2 w-2 -translate-y-1/2 rounded-full bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.45)]" />
+          <div className="relative rounded-full border border-border bg-gradient-to-r from-amber-50/95 via-orange-50/90 to-amber-50/95 px-4 py-1.5 text-[11px] font-semibold text-primary shadow-[0_12px_34px_rgba(163,108,38,0.1)]">
+            <span className="absolute -left-1 top-1/2 h-2 w-2 -translate-y-1/2 rounded-full bg-primary/10 shadow-[0_0_10px_rgba(163,108,38,0.1)]" />
+            <span className="absolute -right-1 top-1/2 h-2 w-2 -translate-y-1/2 rounded-full bg-primary/10 shadow-[0_0_10px_rgba(192,148,82,0.45)]" />
             {label}
           </div>
-          <div className="h-px flex-1 bg-gradient-to-l from-transparent via-cyan-200/70 to-violet-200/70" />
+          <div className="h-px flex-1 bg-gradient-to-l from-transparent via-amber-700/70 to-violet-200/70" />
         </div>
       </div>
     );
@@ -1089,8 +1120,8 @@ function MessageBubble({
     <div className="flex justify-end">
       <div
         className={cn(
-          'max-w-[85%] rounded-2xl px-4 py-3 text-sm shadow-[0_12px_30px_rgba(6,16,34,0.22)]',
-          'bg-gradient-to-br from-primary to-violet-400 text-primary-foreground shadow-[0_14px_34px_rgba(124,92,255,0.24)]',
+          'max-w-[85%] rounded-2xl px-4 py-3 text-sm shadow-[0_12px_30px_rgba(104,67,25,0.08)]',
+          'bg-gradient-to-br from-primary to-amber-700 text-primary-foreground shadow-[0_14px_34px_rgba(163,108,38,0.24)]',
         )}
       >
         <div className="whitespace-pre-wrap break-words">{displayContent}</div>
@@ -1125,7 +1156,7 @@ function InstructorMessageBubble({
   return (
     <div className="flex justify-start">
       <InstructorAvatar agentName={agentName} agentIntro={agentIntro} />
-      <div className="pbl-v2-instructor-bubble ml-2 max-w-[85%] rounded-2xl px-4 py-3 text-sm text-card-foreground shadow-[0_12px_30px_rgba(6,16,34,0.22)]">
+      <div className="pbl-v2-instructor-bubble ml-2 max-w-[85%] rounded-2xl px-4 py-3 text-sm text-card-foreground shadow-[0_12px_30px_rgba(104,67,25,0.08)]">
         <div className="pbl-v2-instructor-label mb-1 text-[10px] uppercase">{agentName}</div>
         <MarkdownText content={displayContent} />
         {typing && <ContinuingDots />}
@@ -1141,7 +1172,7 @@ function InstructorMessageBubble({
 const PBL_INSTRUCTOR_AVATAR = '/avatars/instructor.png';
 
 const INSTRUCTOR_AVATAR_RING =
-  'h-8 w-8 overflow-hidden rounded-full border border-primary/35 bg-primary/15 shadow-[0_0_22px_rgba(169,148,255,0.22)]';
+  'h-8 w-8 overflow-hidden rounded-full border border-primary/35 bg-primary/15 shadow-[0_0_22px_rgba(163,108,38,0.1)]';
 
 function InstructorAvatar({
   agentName,
@@ -1210,7 +1241,7 @@ function CharacterAvatar({
   }
   return (
     <div
-      className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-amber-200/40 bg-gradient-to-br from-amber-300/30 to-rose-300/25 text-xs font-semibold text-amber-100 shadow-[0_0_22px_rgba(251,191,36,0.18)]"
+      className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-amber-200/40 bg-gradient-to-br from-amber-300/30 to-rose-300/25 text-xs font-semibold text-amber-800 shadow-[0_0_22px_rgba(251,191,36,0.18)]"
       title={name}
       aria-hidden="true"
     >
@@ -1472,7 +1503,7 @@ function streamStatusLabel(
 function ThinkingDots({ tone = 'muted' }: { readonly tone?: 'muted' | 'violet' } = {}) {
   const dotClass =
     tone === 'violet'
-      ? 'bg-violet-500/70 shadow-[0_0_10px_rgba(139,92,246,0.28)]'
+      ? 'bg-primary/10 shadow-[0_0_10px_rgba(163,108,38,0.1)]'
       : 'bg-muted-foreground';
   return (
     <div className="flex items-center gap-1 py-1">
@@ -1514,7 +1545,7 @@ function ContinuingDots({ tone = 'muted' }: { readonly tone?: 'muted' | 'violet'
   const { t } = useI18n();
   const dotClass =
     tone === 'violet'
-      ? 'bg-violet-500/65 shadow-[0_0_10px_rgba(139,92,246,0.24)]'
+      ? 'bg-primary/10 shadow-[0_0_10px_rgba(163,108,38,0.1)]'
       : 'bg-muted-foreground/55';
   return (
     <div className="mt-1 flex items-center gap-1" aria-label={t('pbl.v2.chat.stillTyping')}>

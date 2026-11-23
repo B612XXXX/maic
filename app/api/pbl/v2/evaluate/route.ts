@@ -39,12 +39,16 @@ import {
   runTaskEvaluation,
 } from '@/lib/pbl/v2/agents/evaluator';
 import type { PBLProjectV2 } from '@/lib/pbl/v2/types';
+import {
+  withCourtroomRuntimeProject,
+  type CourtroomRuntimeScope,
+} from '@/lib/server/legal/courtroom-runtime';
 
 const log = createLogger('PBL v2 Evaluate API');
 
 type EvalKind = 'task' | 'milestone' | 'final';
 
-interface EvaluateRequest {
+interface EvaluateRequest extends CourtroomRuntimeScope {
   project: PBLProjectV2;
   kind: EvalKind;
   milestoneId?: string;
@@ -76,7 +80,10 @@ export async function POST(req: NextRequest) {
   if (body.kind === 'milestone' && !body.milestoneId) {
     return apiError('MISSING_REQUIRED_FIELD', 400, "kind='milestone' requires milestoneId.");
   }
+  return withCourtroomRuntimeProject(req, body, (project) => evaluate(req, { ...body, project }));
+}
 
+async function evaluate(req: NextRequest, body: EvaluateRequest) {
   let resolved;
   try {
     resolved = await resolveModelFromRequest(req, body, 'pbl-v2-runtime:evaluate');

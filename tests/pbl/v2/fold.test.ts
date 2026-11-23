@@ -227,6 +227,28 @@ describe('foldPBLRuntime', () => {
     expect(folded.learnerState.runtimeResetEpoch).toBe(1);
   });
 
+  it('preserves the learner presentation preference when restarting the practice', () => {
+    const designTemplate = stripToDesignTemplate(makeProject());
+    const state = extractLearnerState(makeProject({ workspacePresentationOverride: 'courtroom' }));
+    const folded = foldPBLRuntime({
+      designTemplate,
+      records: [
+        record(0, snapshotPayload(state)),
+        record(
+          1,
+          runtimePayload({
+            id: 'reset-presentation',
+            kind: 'project_reset',
+            actorType: 'user',
+            ts: '2026-11-09T00:00:02.000Z',
+          }),
+        ),
+      ],
+    });
+    expect(folded.learnerState.workspacePresentationOverride).toBe('courtroom');
+    expect(folded.learnerState.uiPhase).toBe('hero');
+  });
+
   it('uses a snapshot anchor to skip already-reflected duplicate events', () => {
     const designTemplate = stripToDesignTemplate(makeProject());
     const withFirstMessage = extractLearnerState(makeProject());

@@ -148,6 +148,8 @@ This PBL is a **role-play scenario**: the learner will step into a concrete situ
 
 Scenario brief from the platform: A long-time donor wants naming control over a new exhibit; preserve the relationship and the museum's independence.
 
+
+For a courtroom exercise, author the shared factual case documents at preparation before any learner response. Every party reads the same documents. Do not add undisclosed facts, fictitious citations, or the answer. Select courtroom only for this kind of exercise.
 ### Step A — fully author the scenario with `set_scenario(...)`
 Call **exactly once, right after `set_project_info` and before any `add_milestone`**:
 - `setting`: the concrete overall premise / what is going on (in the project language).

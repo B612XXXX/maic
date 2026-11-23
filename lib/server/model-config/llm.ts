@@ -10,8 +10,7 @@
 import { attachModelFallback } from '@/lib/ai/model-fallbacks';
 import { getProviderPreset } from '@/lib/config/provider-presets';
 import { getModel, getProvider, isProviderKeyRequired } from '@/lib/ai/providers';
-import { fetchWithRedirectValidation } from '@/lib/server/fetch-with-redirect-validation';
-import { clientBaseUrlLlmFetch } from '@/lib/server/llm-provider-fetch';
+import { clientBaseUrlLlmFetch, serverConfiguredLlmFetch } from '@/lib/server/llm-provider-fetch';
 import type { LlmStage } from '@/lib/server/model-routes';
 import type { ResolvedModel } from '@/lib/server/resolve-model';
 import { validateClientBaseUrl } from '@/lib/server/ssrf-guard';
@@ -106,7 +105,7 @@ export async function languageModelFor(
     ...(keyOptional ? { requiresApiKey: false } : {}),
     baseUrl: target.baseUrl,
     proxy: target.proxy,
-    fetchImpl: userEndpoint ? clientBaseUrlLlmFetch : fetchWithRedirectValidation,
+    fetchImpl: userEndpoint ? clientBaseUrlLlmFetch : serverConfiguredLlmFetch,
   });
   return {
     model,

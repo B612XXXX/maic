@@ -438,6 +438,67 @@ describe('task-engine outline step', () => {
     expect(done?.outlines[0].pblConfig.scenarioBrief).toContain('朋友压力很大');
   });
 
+  test.each([
+    ['合同解除有什么条件，为什么违约时不一定能要求全额退款？', true],
+    ['乙方违约为什么不一定要全额退钱？', true],
+    ['只讲合同解除的条件。', false],
+    ['劳动合同解除有什么条件？', false],
+    ['只解释合同解除的条件，不要演练。', false],
+    ['什么是合同解除？', false],
+    ['解释如何计算二次函数的顶点。', false],
+  ])(
+    'adds a fixed short exercise only for a matched learning request (%s)',
+    async (requirement, expected) => {
+      vi.resetModules();
+      streamLLMMock.mockReset();
+      resolveModelMock.mockResolvedValue({
+        model: { provider: 'glm.chat', modelId: 'glm-5.1' },
+        modelInfo: { outputWindow: 4096, capabilities: {} },
+        modelString: 'glm:glm-5.1',
+      });
+      streamLLMMock.mockReturnValue({
+        fullStream: (async function* () {
+          yield {
+            type: 'text-delta',
+            text: JSON.stringify({
+              languageDirective: '中文',
+              outlines: [
+                {
+                  id: 'explain',
+                  type: 'slide',
+                  title: '概念讲解',
+                  description: '解释规则。',
+                  keyPoints: [],
+                  order: 1,
+                },
+              ],
+            }),
+          };
+          yield { type: 'finish', finishReason: 'stop' };
+        })(),
+      });
+      const events = await outlineEvents({ requirement });
+      const completed = events.find((event) => event.type === 'done');
+      expect(completed?.outlines).toMatchObject(
+        expected
+          ? [
+              { type: 'slide', order: 1 },
+              {
+                type: 'pbl',
+                order: 2,
+                pblConfig: {
+                  scenarioRoleplay: true,
+                  presentation: 'courtroom',
+                  courtroomPractice: 'contract-delivery-v1',
+                },
+              },
+            ]
+          : [{ type: 'slide', order: 1 }],
+      );
+      expect(completed?.outlines).toHaveLength(expected ? 2 : 1);
+    },
+  );
+
   test('ensures streamed outline ids are unique', async () => {
     vi.resetModules();
     streamLLMMock.mockReset();

@@ -1,4 +1,4 @@
-import type { WidgetType } from '@openmaic/dsl';
+import type { PBLWorkspacePresentation, WidgetType } from '@openmaic/dsl';
 
 export type { WidgetType } from '@openmaic/dsl';
 
@@ -101,6 +101,7 @@ export interface SceneOutline {
     issueCount?: number;
     scenarioRoleplay?: boolean;
     scenarioBrief?: string;
+    presentation?: PBLWorkspacePresentation;
   };
   widgetType?: WidgetType;
   widgetOutline?: WidgetOutline;

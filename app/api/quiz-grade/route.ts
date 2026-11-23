@@ -89,18 +89,25 @@ ${commentPrompt ? `Grading guidance: ${commentPrompt}\n` : ''}Student answer: ${
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       if (!jsonMatch) throw new Error('No JSON found');
       const parsed = JSON.parse(jsonMatch[0]);
+      if (
+        (typeof parsed.score !== 'number' && typeof parsed.score !== 'string') ||
+        String(parsed.score).trim() === '' ||
+        !Number.isFinite(Number(parsed.score)) ||
+        typeof parsed.comment !== 'string' ||
+        !parsed.comment.trim()
+      ) {
+        throw new Error('Incomplete grading response');
+      }
       gradeResult = {
         score: Math.max(0, Math.min(points, Math.round(Number(parsed.score)))),
         comment: String(parsed.comment || ''),
       };
     } catch {
-      // Fallback: give partial credit with a generic comment
-      gradeResult = {
-        score: Math.round(points * 0.5),
-        comment: isZh
-          ? '已作答，请参考标准答案。'
-          : 'Answer received. Please refer to the standard answer.',
-      };
+      return apiError(
+        'INTERNAL_ERROR',
+        502,
+        isZh ? '反馈暂未生成，请重试' : 'Feedback is not ready. Please retry.',
+      );
     }
 
     return apiSuccess({ ...gradeResult });

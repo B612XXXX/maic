@@ -13,9 +13,10 @@
 
 import type { PBLMilestone, PBLProjectV2 } from '@/lib/pbl/v2/types';
 import Image from 'next/image';
-import { Maximize2, Workflow } from 'lucide-react';
+import { BookOpen, Maximize2, Upload, Workflow, X } from 'lucide-react';
 import {
   useCallback,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -24,7 +25,7 @@ import {
 } from 'react';
 import { PBLV2Sidebar } from './sidebar';
 import { PBLV2AgentTabs } from './agent-tabs';
-import { PBLV2SubmissionPanel, type SubmissionEvaluationStatus } from './submission';
+import type { SubmissionEvaluationStatus } from './submission';
 import { PBLV2RightPanelTabs } from './right-panel-tabs';
 import { shouldShowScenarioBriefing } from './scenario-briefing-gate';
 import { cn } from '@/lib/utils/cn';
@@ -32,6 +33,9 @@ import { useI18n } from '@/lib/hooks/use-i18n';
 import type { CSSProperties } from 'react';
 import { runOneStream, type StreamDisplayState, type StreamStatus } from './use-instructor-stream';
 import type { PBLProjectPatch } from '@/lib/pbl/v2/api/sse';
+import { Courtroom } from './courtroom';
+import { displayedMilestone, usesCourtroom } from './courtroom-state';
+import { PBL_THEME } from './theme';
 
 interface Props {
   readonly project: PBLProjectV2;
@@ -51,7 +55,6 @@ interface Props {
 
 type PanelSlot = 'sidebar' | 'chat' | 'submission';
 type ResizeHandleSide = 'left' | 'right';
-type CSSVariableProperties = CSSProperties & Record<`--${string}`, string | number>;
 
 const DEFAULT_PANEL_WIDTHS = {
   sidebar: 22,
@@ -74,27 +77,6 @@ function streamStatusForEvaluationKind(kind: unknown): StreamStatus {
   return 'instructor';
 }
 
-const PBL_WORKSPACE_THEME = {
-  '--background': 'oklch(0.205 0.055 264)',
-  '--foreground': 'oklch(0.962 0.016 260)',
-  '--card': 'oklch(0.285 0.055 263)',
-  '--card-foreground': 'oklch(0.97 0.014 260)',
-  '--popover': 'oklch(0.265 0.055 263)',
-  '--popover-foreground': 'oklch(0.97 0.014 260)',
-  '--primary': '#9d8cff',
-  '--primary-foreground': 'oklch(0.99 0.005 260)',
-  '--secondary': 'oklch(0.32 0.052 260)',
-  '--secondary-foreground': 'oklch(0.95 0.016 260)',
-  '--muted': 'oklch(0.305 0.046 262)',
-  '--muted-foreground': 'oklch(0.78 0.04 258)',
-  '--accent': 'oklch(0.37 0.07 260)',
-  '--accent-foreground': 'oklch(0.965 0.014 260)',
-  '--destructive': 'oklch(0.66 0.19 25)',
-  '--border': 'oklch(0.74 0.055 262 / 0.22)',
-  '--input': 'oklch(0.68 0.05 262 / 0.3)',
-  '--ring': 'oklch(0.73 0.12 282)',
-} satisfies CSSVariableProperties;
-
 interface CompleteTaskPayload {
   project?: PBLProjectV2;
   completedMicrotaskId?: string;
@@ -113,6 +95,31 @@ export function PBLV2Workspace({
   onExpand,
 }: Props) {
   const rootRef = useRef<HTMLDivElement>(null);
+  const drawerId = useId();
+  const drawerTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const drawerCloseRef = useRef<HTMLButtonElement | null>(null);
+  const courtroom = usesCourtroom(project);
+  const stageId = displayedMilestone(project)?.id;
+  const [drawer, setDrawer] = useState<{ stageId?: string; tab: 'submission' | 'briefing' } | null>(
+    null,
+  );
+  const drawerTab = courtroom && drawer && drawer.stageId === stageId ? drawer.tab : null;
+  const closeDrawer = () => {
+    setDrawer(null);
+    drawerTriggerRef.current?.focus();
+  };
+  const openDrawer = (tab: 'submission' | 'briefing', trigger?: HTMLButtonElement) => {
+    if (drawerTab === tab) {
+      closeDrawer();
+      return;
+    }
+    drawerTriggerRef.current =
+      trigger ??
+      rootRef.current?.querySelector<HTMLButtonElement>('[data-court-briefing-trigger]') ??
+      null;
+    setDrawer({ stageId, tab });
+    requestAnimationFrame(() => drawerCloseRef.current?.focus());
+  };
   const [panelWidths, setPanelWidths] = useState(DEFAULT_PANEL_WIDTHS);
   const [resizingHandle, setResizingHandle] = useState<ResizeHandleSide | null>(null);
   const [submissionEvaluationStatus, setSubmissionEvaluationStatus] =
@@ -339,13 +346,23 @@ export function PBLV2Workspace({
     <div
       ref={rootRef}
       className={cn(
-        'grid h-full w-full overflow-hidden bg-background text-foreground ring-1 ring-indigo-100/[0.16]',
-        'shadow-[inset_0_1px_0_rgba(255,255,255,0.10),0_24px_72px_rgba(42,50,95,0.20)]',
-        'bg-[radial-gradient(circle_at_18%_5%,rgba(119,102,255,0.20),transparent_31%),radial-gradient(circle_at_86%_10%,rgba(20,184,166,0.17),transparent_29%),radial-gradient(circle_at_52%_105%,rgba(96,165,250,0.10),transparent_34%),linear-gradient(180deg,#182542_0%,#111c34_48%,#162743_100%)]',
+        'relative grid h-full w-full overflow-hidden bg-background text-foreground ring-1 ring-border',
+        'shadow-[0_16px_60px_rgba(104,67,25,0.08)]',
       )}
       data-pbl-workspace="true"
+      data-workspace-view={courtroom ? 'courtroom' : 'standard'}
+      onKeyDown={(event) => {
+        if (
+          event.key === 'Escape' &&
+          drawerTab &&
+          !(event.target as HTMLElement).closest('[role="dialog"]')
+        ) {
+          event.preventDefault();
+          closeDrawer();
+        }
+      }}
       style={{
-        ...PBL_WORKSPACE_THEME,
+        ...PBL_THEME,
         gridTemplateRows: '58px minmax(0, 1fr)',
         gridTemplateColumns: `${panelWidths.sidebar}fr 6px ${panelWidths.chat}fr 6px ${panelWidths.submission}fr`,
       }}
@@ -356,6 +373,8 @@ export function PBLV2Workspace({
         panelWidths={panelWidths}
         onReturnToHero={onReturnToHero}
         onExpand={onExpand}
+        onProjectChange={onProjectChange}
+        busy={instructorStreaming || sceneBusy || taskBusy}
       />
       <Panel slot="sidebar">
         {/* Scene controls ("finish this act" / enter / continue) are disabled
@@ -379,7 +398,18 @@ export function PBLV2Workspace({
         active={resizingHandle === 'left'}
         onMouseDown={handleResizeStart}
       />
-      <Panel slot="chat">
+      <Panel
+        slot="chat"
+        style={courtroom ? { gridColumn: '3 / -1' } : undefined}
+        contentClassName="flex flex-col min-h-0"
+      >
+        {courtroom && (
+          <Courtroom
+            project={project}
+            busy={instructorStreaming && !submissionEvaluationStatus}
+            onBriefing={() => openDrawer('briefing')}
+          />
+        )}
         <PBLV2AgentTabs
           project={project}
           onProjectChange={onProjectChange}
@@ -387,32 +417,97 @@ export function PBLV2Workspace({
           instructorStreaming={instructorStreaming}
           onInstructorStreamingChange={onInstructorStreamingChange}
           externalStream={workspaceStream}
+          courtroom={courtroom}
         />
       </Panel>
       <WorkspaceResizeHandle
         side="right"
+        hidden={courtroom}
         active={resizingHandle === 'right'}
         onMouseDown={handleResizeStart}
       />
-      <Panel slot="submission">
-        {showScenarioBriefing ? (
+      <Panel
+        slot="submission"
+        className={courtroom ? 'rounded-xl border border-border shadow-xl' : undefined}
+        style={
+          courtroom
+            ? {
+                position: 'absolute',
+                top: 70,
+                right: 62,
+                bottom: 12,
+                width: 'min(380px, calc(78% - 76px))',
+                height: 'auto',
+                zIndex: 55,
+                display: drawerTab ? undefined : 'none',
+              }
+            : undefined
+        }
+      >
+        <div
+          id={drawerId}
+          role={courtroom ? 'region' : undefined}
+          aria-label={courtroom ? (drawerTab === 'briefing' ? '情景简报' : '提交区') : undefined}
+          className="flex h-full min-h-0 flex-col"
+        >
+          {courtroom && (
+            <div className="flex shrink-0 items-center justify-between border-b border-border bg-card px-4 py-3 text-sm font-semibold">
+              <span>{drawerTab === 'briefing' ? '情景简报' : '提交区'}</span>
+              <button
+                ref={drawerCloseRef}
+                type="button"
+                onClick={closeDrawer}
+                aria-label="收起侧栏"
+                className="rounded-md p-1 text-muted-foreground hover:bg-muted"
+              >
+                <X size={16} />
+              </button>
+            </div>
+          )}
           <PBLV2RightPanelTabs
             project={project}
             onProjectChange={onProjectChange}
             onEvaluationStatusChange={setSubmissionEvaluationStatus}
             onInstructorStreamingChange={onInstructorStreamingChange}
             instructorStreaming={instructorStreaming}
+            showBriefing={showScenarioBriefing}
+            selectedTab={courtroom ? (drawerTab ?? 'submission') : undefined}
+            hideTabs={courtroom}
           />
-        ) : (
-          <PBLV2SubmissionPanel
-            project={project}
-            onProjectChange={onProjectChange}
-            onEvaluationStatusChange={setSubmissionEvaluationStatus}
-            onInstructorStreamingChange={onInstructorStreamingChange}
-            instructorStreaming={instructorStreaming}
-          />
-        )}
+        </div>
       </Panel>
+      {courtroom && (
+        <div
+          className="absolute right-2 top-[78px] z-50 flex w-11 flex-col gap-3"
+          aria-label="法庭辅助面板"
+        >
+          {!project.courtroomPractice && (
+            <button
+              type="button"
+              aria-label="展开提交区"
+              aria-expanded={drawerTab === 'submission'}
+              aria-controls={drawerId}
+              onClick={(event) => openDrawer('submission', event.currentTarget)}
+              className="flex flex-col items-center gap-2 rounded-xl border border-border bg-card px-2 py-3 text-xs text-primary shadow-sm hover:bg-accent"
+            >
+              <Upload size={17} />
+              <span>提交区</span>
+            </button>
+          )}
+          <button
+            type="button"
+            data-court-briefing-trigger
+            aria-label="展开情景简报"
+            aria-expanded={drawerTab === 'briefing'}
+            aria-controls={drawerId}
+            onClick={(event) => openDrawer('briefing', event.currentTarget)}
+            className="flex flex-col items-center gap-2 rounded-xl border border-border bg-card px-2 py-3 text-xs text-primary shadow-sm hover:bg-accent"
+          >
+            <BookOpen size={17} />
+            <span>情景简报</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -423,24 +518,28 @@ function WorkspaceTopBar({
   panelWidths,
   onReturnToHero,
   onExpand,
+  onProjectChange,
+  busy,
 }: {
   readonly project: PBLProjectV2;
   readonly activeMilestoneIndex: number;
   readonly panelWidths: typeof DEFAULT_PANEL_WIDTHS;
   readonly onReturnToHero: () => void;
   readonly onExpand?: () => void;
+  readonly onProjectChange: (next: PBLProjectV2) => void;
+  readonly busy: boolean;
 }) {
   const { t } = useI18n();
   return (
     <header
-      className="relative z-40 col-span-full grid min-w-0 items-center overflow-hidden border-b border-cyan-100/[0.12] bg-[#111d35]/88 px-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.09),0_14px_42px_rgba(5,12,28,0.24)] backdrop-blur-xl"
+      className="relative z-40 col-span-full grid min-w-0 items-center overflow-hidden border-b border-border bg-[#fffaf2]/88 px-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.09),0_14px_42px_rgba(163,108,38,0.1)] backdrop-blur-xl"
       style={{
         gridTemplateColumns: `${panelWidths.sidebar}fr 6px ${panelWidths.chat}fr 6px ${panelWidths.submission}fr`,
       }}
     >
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_0%,rgba(157,140,255,0.20),transparent_30%),radial-gradient(circle_at_78%_0%,rgba(34,211,238,0.13),transparent_26%),linear-gradient(90deg,rgba(255,255,255,0.05),transparent_34%,rgba(255,255,255,0.035))]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_0%,rgba(163,108,38,0.20),transparent_30%),radial-gradient(circle_at_78%_0%,rgba(192,148,82,0.13),transparent_26%),linear-gradient(90deg,rgba(255,255,255,0.05),transparent_34%,rgba(255,255,255,0.035))]" />
       <div className="relative flex min-w-0 flex-1 items-center gap-3">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-violet-200/25 bg-violet-100/[0.08] shadow-[0_0_24px_rgba(157,140,255,0.18)]">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-primary/10 shadow-[0_0_24px_rgba(163,108,38,0.18)]">
           <Image
             src="/openmaic-mark.png"
             alt="OpenMAIC"
@@ -451,7 +550,7 @@ function WorkspaceTopBar({
         </div>
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <h2 className="line-clamp-1 text-base font-semibold tracking-tight text-white">
+            <h2 className="line-clamp-1 text-base font-semibold tracking-tight text-foreground">
               {project.title}
             </h2>
           </div>
@@ -467,21 +566,21 @@ function WorkspaceTopBar({
               type="button"
               onClick={onReturnToHero}
               title={t('pbl.v2.workspace.returnToHero')}
-              className="rounded bg-gradient-to-r from-violet-200 via-cyan-200 to-sky-200 bg-clip-text text-transparent transition-opacity hover:opacity-80 focus-visible:underline focus-visible:outline-none"
+              className="rounded bg-gradient-to-r from-amber-800 via-amber-700 to-amber-600 bg-clip-text text-transparent transition-opacity hover:opacity-80 focus-visible:underline focus-visible:outline-none"
             >
               {t('pbl.v2.workspace.breadcrumbOverview')}
             </button>
-            <span aria-hidden className="text-indigo-100/40">
+            <span aria-hidden className="text-primary">
               ›
             </span>
-            <span className="text-indigo-100/55">{t('pbl.v2.workspace.breadcrumbCurrent')}</span>
+            <span className="text-primary">{t('pbl.v2.workspace.breadcrumbCurrent')}</span>
           </nav>
         </div>
       </div>
 
       <div className="relative col-start-3 hidden min-w-0 items-center gap-2 lg:flex">
-        <div className="flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-indigo-100/[0.14] bg-white/[0.045] px-2.5 text-[11px] font-medium text-indigo-100/82">
-          <Workflow className="h-3.5 w-3.5 text-violet-200/90" />
+        <div className="flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-border bg-card px-2.5 text-[11px] font-medium text-primary">
+          <Workflow className="h-3.5 w-3.5 text-primary" />
           {t('pbl.v2.workspace.progressLabel')}
         </div>
         <div className="flex min-w-0 flex-1 items-center gap-1.5">
@@ -497,14 +596,14 @@ function WorkspaceTopBar({
                 <div
                   className={cn(
                     'h-1.5 min-w-4 flex-1 rounded-full transition-colors',
-                    completed && 'bg-cyan-300/70 shadow-[0_0_12px_rgba(103,232,249,0.30)]',
-                    active && 'bg-violet-300 shadow-[0_0_16px_rgba(167,139,250,0.42)]',
-                    !active && !completed && 'bg-slate-500/35',
+                    completed && 'bg-primary/45',
+                    active && 'bg-primary',
+                    !active && !completed && 'bg-card',
                   )}
                 />
                 {active && (
                   <div
-                    className="absolute top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/50 bg-violet-300 shadow-[0_0_18px_rgba(167,139,250,0.58)] transition-[left] duration-500 ease-out"
+                    className="absolute top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border border-border bg-primary/10 shadow-[0_0_18px_rgba(163,108,38,0.1)] transition-[left] duration-500 ease-out"
                     style={{ left: `${milestoneProgressFraction(milestone) * 100}%` }}
                   />
                 )}
@@ -514,11 +613,31 @@ function WorkspaceTopBar({
         </div>
       </div>
 
+      {project.scenario && (
+        <select
+          aria-label="情景工作区样式"
+          value={
+            project.workspacePresentationOverride ?? project.workspacePresentation ?? 'standard'
+          }
+          disabled={busy}
+          onChange={(event) =>
+            onProjectChange({
+              ...project,
+              workspacePresentationOverride: event.target.value as 'standard' | 'courtroom',
+              updatedAt: new Date().toISOString(),
+            })
+          }
+          className="relative col-start-5 mr-10 max-w-full justify-self-end rounded-lg border border-border bg-card px-2 py-1.5 text-xs text-foreground disabled:opacity-50"
+        >
+          <option value="standard">情景对话</option>
+          <option value="courtroom">模拟法庭</option>
+        </select>
+      )}
       {onExpand && (
         <button
           type="button"
           onClick={onExpand}
-          className="absolute right-3 top-1/2 z-50 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md border border-cyan-100/[0.18] bg-white/[0.06] text-indigo-100/85 shadow-sm backdrop-blur transition-colors hover:bg-white/[0.12]"
+          className="absolute right-3 top-1/2 z-50 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md border border-border bg-card text-primary shadow-sm backdrop-blur transition-colors hover:bg-card"
           aria-label={t('pbl.v2.workspace.enterFullscreen')}
           title={t('pbl.v2.workspace.enterFullscreen')}
         >
@@ -560,16 +679,19 @@ export function workspaceActiveMilestoneIndex(project: PBLProjectV2): number {
 function WorkspaceResizeHandle({
   side,
   active,
+  hidden = false,
   onMouseDown,
 }: {
   readonly side: ResizeHandleSide;
   readonly active: boolean;
+  readonly hidden?: boolean;
   readonly onMouseDown: (event: ReactMouseEvent, side: ResizeHandleSide) => void;
 }) {
   const { t } = useI18n();
   return (
     <div
       role="separator"
+      style={hidden ? { display: 'none' } : undefined}
       aria-orientation="vertical"
       aria-label={
         side === 'left'
@@ -584,14 +706,14 @@ function WorkspaceResizeHandle({
     >
       <div
         className={cn(
-          'absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-cyan-100/[0.18] transition-colors',
+          'absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-primary/10 transition-colors',
           'group-hover:bg-primary/55',
           active && 'bg-primary/75',
         )}
       />
       <div
         className={cn(
-          'absolute left-1/2 top-1/2 h-10 w-px -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/60 opacity-0 shadow-[0_0_14px_rgba(157,140,255,0.28)] transition-all',
+          'absolute left-1/2 top-1/2 h-10 w-px -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/60 opacity-0 shadow-[0_0_14px_rgba(163,108,38,0.28)] transition-all',
           'group-hover:h-14 group-hover:opacity-100',
           active && 'h-16 opacity-100',
         )}
@@ -600,20 +722,31 @@ function WorkspaceResizeHandle({
   );
 }
 
-function Panel({ slot, children }: { readonly slot: PanelSlot; readonly children: ReactNode }) {
+function Panel({
+  slot,
+  children,
+  className,
+  contentClassName,
+  style,
+}: {
+  readonly slot: PanelSlot;
+  readonly children: ReactNode;
+  readonly className?: string;
+  readonly contentClassName?: string;
+  readonly style?: CSSProperties;
+}) {
   return (
     <div
       className={cn(
-        'relative row-start-2 h-full min-w-0 overflow-hidden backdrop-blur-[2px]',
-        slot === 'sidebar' &&
-          'bg-[linear-gradient(180deg,rgba(28,39,71,0.96)_0%,rgba(22,34,62,0.94)_100%)] shadow-[inset_-18px_0_38px_rgba(5,12,28,0.10)]',
-        slot === 'chat' &&
-          'bg-[radial-gradient(circle_at_50%_0%,rgba(99,102,241,0.10),transparent_34%),linear-gradient(180deg,rgba(15,27,51,0.78)_0%,rgba(11,23,43,0.82)_100%)]',
-        slot === 'submission' &&
-          'bg-[linear-gradient(180deg,rgba(18,43,65,0.94)_0%,rgba(18,32,58,0.94)_100%)] shadow-[inset_18px_0_38px_rgba(5,12,28,0.10)]',
+        'relative row-start-2 h-full min-w-0 overflow-hidden bg-card',
+        slot === 'sidebar' && 'bg-[#f2eadf]',
+        slot === 'chat' && 'bg-[#fcf8f1]',
+        slot === 'submission' && 'bg-[#f8f1e5]',
+        className,
       )}
+      style={style}
     >
-      <div className="relative z-10 h-full">{children}</div>
+      <div className={cn('relative z-10 h-full', contentClassName)}>{children}</div>
     </div>
   );
 }

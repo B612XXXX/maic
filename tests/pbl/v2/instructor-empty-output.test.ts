@@ -171,3 +171,104 @@ describe('Instructor — empty-output fallback on a silent dead turn (#593 point
     expect(emptyOutputIndex(events)).toBeGreaterThanOrEqual(0);
   });
 });
+
+describe('scenario closing debrief', () => {
+  function wrapupProject(): PBLProjectV2 {
+    const project = makeProject();
+    project.scenario = {
+      setting: '共同案卷的退款争议',
+      characters: [{ id: 'opponent', name: '被告', persona: '依据材料回应' }],
+    };
+    const roleplay = structuredClone(project.milestones[0]);
+    roleplay.scenarioStage = 'roleplay';
+    roleplay.status = 'completed';
+    roleplay.microtasks[0].status = 'completed';
+    const wrapup = project.milestones[0];
+    wrapup.id = 'wrapup';
+    wrapup.order = 1;
+    wrapup.scenarioStage = 'wrapup';
+    wrapup.microtasks[0].id = 'wrapup-task';
+    project.milestones = [roleplay, wrapup];
+    project.threads[0].messages = [
+      {
+        id: 'old-question',
+        roleType: 'user',
+        content: '请帮我写第一版原告主张',
+        microtaskId: roleplay.microtasks[0].id,
+        ts: project.createdAt,
+      },
+    ];
+    project.threads.push({
+      agentId: 'simulator',
+      messages: [
+        {
+          id: 'argument',
+          roleType: 'user',
+          content: '现有材料不足以支持立即全额退款。',
+          microtaskId: roleplay.microtasks[0].id,
+          ts: project.createdAt,
+        },
+      ],
+    });
+    return project;
+  }
+
+  it('requests a terminal reflection instead of answering preparation or assigning a new task', async () => {
+    const model = scriptedModel([
+      [
+        { type: 'stream-start', warnings: [] },
+        { type: 'text-start', id: 'closing' },
+        {
+          type: 'text-delta',
+          id: 'closing',
+          delta: '你依据材料修正了全额退款主张，下次可更明确地区分事实与推断。',
+        },
+        { type: 'text-end', id: 'closing' },
+        { type: 'finish', finishReason: { unified: 'stop', raw: 'stop' }, usage: USAGE },
+      ],
+    ]);
+    const events: PBLSSEEvent[] = [];
+    for await (const event of runInstructorTurn({
+      project: wrapupProject(),
+      userMessage: '继续',
+      phase: 'setup',
+      languageModel: model as never,
+    }))
+      events.push(event);
+    const prompt = model.doStreamCalls[0].prompt;
+    const system = prompt
+      .filter((m) => m.role === 'system')
+      .map((m) => m.content)
+      .join('\n');
+    const conversation = JSON.stringify(prompt.filter((m) => m.role !== 'system'));
+    expect(system).toContain('现有材料不足以支持立即全额退款');
+    expect(system).not.toContain('Right now: SETUP phase');
+    expect(conversation).not.toContain('请帮我写第一版原告主张');
+    expect(conversation).toContain('closing debrief');
+    const closing = events.findIndex(
+      (e) => e.type === 'project_patch' && e.patch.kind === 'message',
+    );
+    const completion = events.findIndex(
+      (e) => e.type === 'project_patch' && e.patch.kind === 'advance' && e.patch.projectCompleted,
+    );
+    expect(closing).toBeGreaterThanOrEqual(0);
+    expect(completion).toBeGreaterThan(closing);
+  });
+
+  it('keeps the wrapup active when the model produces no closing text', async () => {
+    const project = wrapupProject();
+    const events: PBLSSEEvent[] = [];
+    for await (const event of runInstructorTurn({
+      project,
+      userMessage: '继续',
+      phase: 'setup',
+      languageModel: scriptedModel([]) as never,
+    }))
+      events.push(event);
+    expect(emptyOutputIndex(events)).toBeGreaterThanOrEqual(0);
+    expect(project.milestones[1].status).toBe('active');
+    expect(events.some((e) => e.type === 'project_patch' && e.patch.kind === 'advance')).toBe(
+      false,
+    );
+  });
+});

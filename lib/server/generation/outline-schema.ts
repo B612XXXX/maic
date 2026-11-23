@@ -13,6 +13,7 @@
  * Normalizing a normalized outline changes nothing.
  */
 import { WIDGET_TYPES } from '@openmaic/dsl';
+import { isCourtroomPracticeId } from '@/lib/legal/courtroom';
 
 import type { SceneOutline } from '@/lib/types/generation';
 
@@ -147,14 +148,24 @@ function interactiveConfig(value: unknown): SceneOutline['interactiveConfig'] {
 function pblConfig(value: unknown): SceneOutline['pblConfig'] {
   const config = record(value);
   if (!config) return undefined;
+  const scenarioRoleplay =
+    typeof config.scenarioRoleplay === 'boolean' ? config.scenarioRoleplay : undefined;
   return defined({
     projectTopic: text(config.projectTopic),
     projectDescription: text(config.projectDescription),
     targetSkills: texts(config.targetSkills, { nonEmpty: true }),
     issueCount: finite(config.issueCount),
-    scenarioRoleplay:
-      typeof config.scenarioRoleplay === 'boolean' ? config.scenarioRoleplay : undefined,
+    scenarioRoleplay,
     scenarioBrief: text(config.scenarioBrief),
+    presentation:
+      scenarioRoleplay &&
+      (config.presentation === 'courtroom' || config.presentation === 'standard')
+        ? config.presentation
+        : undefined,
+    courtroomPractice:
+      scenarioRoleplay && isCourtroomPracticeId(config.courtroomPractice)
+        ? config.courtroomPractice
+        : undefined,
   }) as SceneOutline['pblConfig'];
 }
 

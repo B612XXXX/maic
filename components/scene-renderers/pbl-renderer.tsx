@@ -16,6 +16,8 @@ import { PBLV2Workspace } from './pbl/v2/workspace';
 import { PBLV2Completion } from './pbl/v2/completion';
 import { rectsEqual, type LayoutRect } from './pbl/v2/host-rect';
 import { useI18n } from '@/lib/hooks/use-i18n';
+import { PBL_THEME } from './pbl/v2/theme';
+import { CourtroomReturnLink } from './pbl/v2/courtroom-return-link';
 
 const IMMERSIVE_LAUNCH_DURATION_SECONDS = 0.45;
 // The one-time Hero → workspace launch gets a slower, more deliberate
@@ -221,19 +223,26 @@ function PBLV2Container({
       case 'hero':
       default:
         return (
-          <PBLV2Hero
-            sceneId={sceneId}
-            project={runtimeProject}
-            onProjectChange={onProjectV2Change}
-            onLaunchReady={handleLaunchReady}
-            instructorStreaming={instructorStreaming}
-          />
+          <>
+            {runtimeProject.courtroomPractice?.returnStageId && (
+              <div className="absolute left-4 top-4 z-10">
+                <CourtroomReturnLink stageId={runtimeProject.courtroomPractice.returnStageId} />
+              </div>
+            )}
+            <PBLV2Hero
+              sceneId={sceneId}
+              project={runtimeProject}
+              onProjectChange={onProjectV2Change}
+              onLaunchReady={handleLaunchReady}
+              instructorStreaming={instructorStreaming}
+            />
+          </>
         );
     }
   })();
 
   return (
-    <div ref={hostRef} className="h-full w-full">
+    <div ref={hostRef} className="h-full w-full" style={PBL_THEME}>
       {content}
       {(runtimeProject.uiPhase === 'workspace' || runtimeProject.uiPhase === 'completed') &&
         typeof document !== 'undefined' &&
@@ -468,6 +477,7 @@ function PBLV2WorkspaceLayer({
         )}
         initial={false}
         animate={{ ...(expanded ? fullscreenStyle : dockedStyle), opacity: 1 }}
+        style={PBL_THEME}
         transition={transition}
       >
         {/* Native (OS) fullscreen takes over the top-right slot: OpenMAIC's

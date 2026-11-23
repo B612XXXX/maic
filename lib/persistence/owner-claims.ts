@@ -97,6 +97,7 @@ import { ownerMaterialQuotaLockKey } from './owner-materials';
 import { getServerPersistenceProvider, type ServerPersistenceProvider } from './server-provider';
 import { STAGE_META_OWNERSHIP } from './stage-meta-ownership';
 import { rekeyWorkspaceModelConfig } from './workspace-model-config';
+import { rekeyLegalAssessments } from './legal-assessment';
 
 export interface ClaimParticipant {
   /** Unique; also the key of this participant's count in the claim result. */
@@ -134,6 +135,7 @@ export const CORE_CLAIM_PARTICIPANTS = [
   'legacy-import-bindings',
   'workspace-model-config',
   'custom-agents',
+  'legal-assessments',
 ] as const;
 
 /**
@@ -344,6 +346,11 @@ function coreParticipants(provider: ServerPersistenceProvider): ClaimParticipant
       name: 'custom-agents',
       order: 950,
       rekey: async (tx, from, to) => rekeyOwnerAgents(tx, from, to),
+    },
+    {
+      name: 'legal-assessments',
+      order: 975,
+      rekey: rekeyLegalAssessments,
     },
   ];
 }

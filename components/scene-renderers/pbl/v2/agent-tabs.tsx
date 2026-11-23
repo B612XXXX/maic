@@ -30,6 +30,7 @@ interface Props {
   readonly instructorStreaming: boolean;
   readonly onInstructorStreamingChange: (active: boolean) => void;
   readonly externalStream?: StreamDisplayState | null;
+  readonly courtroom?: boolean;
 }
 
 export function PBLV2AgentTabs({
@@ -39,6 +40,7 @@ export function PBLV2AgentTabs({
   instructorStreaming,
   onInstructorStreamingChange,
   externalStream,
+  courtroom = false,
 }: Props) {
   const { t } = useI18n();
   // Stage A only has Instructor; future agents push more entries here.
@@ -59,7 +61,12 @@ export function PBLV2AgentTabs({
   const showTabsBar = agents.length > 1;
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
+    <div
+      className={cn(
+        'flex flex-col overflow-hidden',
+        courtroom ? 'shrink-0 border-t border-border bg-card' : 'h-full min-h-0 flex-1',
+      )}
+    >
       {showTabsBar && (
         <div className="border-b flex items-center gap-1 px-2 py-1.5 bg-muted/30">
           {agents.map((agent) => (
@@ -82,7 +89,7 @@ export function PBLV2AgentTabs({
       {/* SCENARIO ONLY (increment 5): entrance animation + persistent scene
           banner at the top of the chat column. Self-gates to null for
           ordinary projects and outside roleplay stages — zero footprint. */}
-      <ScenarioStage project={project} />
+      {!courtroom && <ScenarioStage project={project} />}
       <PBLV2Chat
         project={project}
         onProjectChange={onProjectChange}
@@ -91,6 +98,7 @@ export function PBLV2AgentTabs({
         instructorStreaming={instructorStreaming}
         onInstructorStreamingChange={onInstructorStreamingChange}
         externalStream={externalStream}
+        courtroom={courtroom}
       />
     </div>
   );

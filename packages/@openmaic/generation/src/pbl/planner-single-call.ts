@@ -104,6 +104,7 @@ interface PlannerLLMOutput {
   /** SCENARIO ONLY. Present when the outline opted into role-play; hydrated
    *  onto `project.scenario`. Ordinary projects omit it. */
   scenario?: {
+    presentation?: 'standard' | 'courtroom';
     setting?: string;
     goal?: string;
     rules?: string;
@@ -130,6 +131,7 @@ interface PlannerLLMOutput {
     completionCriteria?: string;
     debrief?: string;
     coreConcept?: string;
+    documents?: Array<{ title?: string; content?: string }>;
     /** SCENARIO ONLY. Stage role in the prep → roleplay → wrapup skeleton. */
     scenarioStage?: 'prep' | 'roleplay' | 'wrapup';
     microtasks?: Array<{
@@ -418,6 +420,16 @@ function hydrateProject(
         },
       );
       const coreConcept = toText(m.coreConcept);
+      const documents =
+        isScenario && Array.isArray(m.documents)
+          ? m.documents.slice(0, 6).flatMap((raw) => {
+              const title = toText(raw?.title).slice(0, 100);
+              const content = toText(raw?.content).slice(0, 1800);
+              return title && content
+                ? [{ id: newId('doc'), title, content, docType: 'markdown' as const }]
+                : [];
+            })
+          : [];
       const scenarioStage = (['prep', 'roleplay', 'wrapup'] as const).includes(
         m.scenarioStage as never,
       )
@@ -438,6 +450,7 @@ function hydrateProject(
         // coreConcept onto a scenario milestone.
         ...(coreConcept && !isScenario ? { synthesisCheck: { coreConcept } } : {}),
         ...(scenarioStage ? { scenarioStage } : {}),
+        ...(documents.length ? { documents } : {}),
       };
     },
   );
@@ -555,6 +568,12 @@ export async function generatePBLV2ProjectSingleCall(
   // a plain project if the cast / roleplay stage turned out invalid. No-op for
   // ordinary projects.
   normalizeScenario(project);
+  if (scenarioRoleplay && project.scenario) {
+    const presentation = pblConfig.presentation ?? parsed.scenario?.presentation;
+    if (presentation === 'courtroom' || presentation === 'standard') {
+      project.workspacePresentation = presentation;
+    }
+  }
 
   const finalGaps = plannerCompletionGaps(project, { scenarioRoleplay });
   if (finalGaps.length > 0) {

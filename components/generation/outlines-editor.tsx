@@ -1259,6 +1259,8 @@ function PblConfigDisclosure({
     if (nextConfig.scenarioRoleplay !== true) {
       delete nextConfig.scenarioRoleplay;
       delete nextConfig.scenarioBrief;
+      delete nextConfig.presentation;
+      delete nextConfig.courtroomPractice;
     }
     onUpdate({
       pblConfig: nextConfig,
@@ -1274,6 +1276,8 @@ function PblConfigDisclosure({
     } else {
       delete nextConfig.scenarioRoleplay;
       delete nextConfig.scenarioBrief;
+      delete nextConfig.presentation;
+      delete nextConfig.courtroomPractice;
     }
     onUpdate({ pblConfig: nextConfig });
   };
@@ -1365,12 +1369,36 @@ function PblConfigDisclosure({
         </div>
         {scenarioRoleplay && (
           <div className="space-y-1.5">
+            <label className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+              角色扮演形式
+              <select
+                value={
+                  outline.pblConfig?.courtroomPractice ??
+                  (outline.pblConfig?.presentation === 'courtroom' ? 'courtroom' : 'standard')
+                }
+                onChange={(event) => {
+                  const value = event.target.value;
+                  updateConfig({
+                    presentation: value === 'standard' ? 'standard' : 'courtroom',
+                    courtroomPractice:
+                      value === 'contract-delivery-v1' || value === 'generated' ? value : undefined,
+                  });
+                }}
+                className="rounded-md border border-border/50 bg-background px-2 py-1"
+              >
+                <option value="standard">普通情景</option>
+                <option value="courtroom">自定义模拟法庭</option>
+                <option value="contract-delivery-v1">合同交付与返款短练（固定案卷）</option>
+                <option value="generated">模拟法庭短练（AI 生成案卷）</option>
+              </select>
+            </label>
             <span className="text-xs font-medium text-muted-foreground">
               {t('generation.pblScenarioBrief')}
             </span>
             <textarea
               value={scenarioBrief}
               onChange={(event) => updateConfig({ scenarioBrief: event.target.value })}
+              disabled={outline.pblConfig?.courtroomPractice === 'contract-delivery-v1'}
               placeholder={t('generation.pblScenarioBriefPlaceholder')}
               rows={2}
               className={cn(

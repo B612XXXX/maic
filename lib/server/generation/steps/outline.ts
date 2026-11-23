@@ -40,6 +40,11 @@ import { resolveServerGenerationCapabilities } from '@/lib/server/generation-cap
 import { isNonRetryableHostFailure } from '@/lib/server/generation-run-hooks/runtime';
 import { sortDocumentImagesForVision } from '@/lib/document/bundle';
 import { resolveVocationalActive } from '@/lib/config/feature-flags';
+import {
+  makeCourtroomOutline,
+  permitsCourtroomPractice,
+  preferredCourtroomCase,
+} from '@/lib/legal/courtroom';
 
 import {
   StepAbortedError,
@@ -504,6 +509,11 @@ async function prepareOutline(
     throw new StepRefusal<OutlineRefusal>('prompt-unavailable', 'Prompt template not found');
   }
 
+  if (!taskEngineMode) {
+    prompts.system +=
+      '\n\nChinese legal exam teaching: if the request is about applying a legal test to facts, weighing competing arguments or spotting evidence gaps, add one optional PBL mock trial short exercise after explaining the rule. Do not require the learner to provide a case. This is a narrow exception to the ordinary long-project PBL rule. Use type "pbl" with pblConfig {projectTopic, projectDescription, targetSkills, scenarioRoleplay:true, presentation:"courtroom", courtroomPractice:"generated", scenarioBrief}. Choose courtroomPractice:"contract-delivery-v1" specifically for contract termination and return of a prepayment after disputed performance. Leave courtroomPractice out for explicitly requested longer simulations. Skip this option for definition-only, memorization or statutory text requests, when the learner declines practice, or for unrelated subjects. Never substitute practice for the requested explanation.';
+  }
+
   ctx.log.info(
     `Generating outlines: "${requirements.requirement.substring(0, 50)}" [model=${modelString}]`,
   );
@@ -683,6 +693,12 @@ async function streamOutlines(
           const normalized = taskEngineMode
             ? normalizeTaskEngineOutline(enrichedBase, requirement)
             : sanitizeNonTaskEngineOutline(enrichedBase);
+          if (
+            normalized.pblConfig?.courtroomPractice &&
+            (!permitsCourtroomPractice(requirement) ||
+              parsedOutlines.some((item) => item.pblConfig?.courtroomPractice))
+          )
+            continue;
           const enriched = ensureUniqueOutlineId(normalized, usedOutlineIds);
           parsedOutlines.push(enriched);
           emit({ type: 'outline', data: enriched, index: parsedOutlines.length - 1 });
@@ -788,6 +804,22 @@ async function streamOutlines(
     // All retries exhausted, no outlines produced
     log.error(`Outline generation failed after ${MAX_STREAM_RETRIES + 1} attempts: ${lastError}`);
     throw new OutlineGenerationError(lastError || 'Failed to generate outlines');
+  }
+
+  const suggested = !taskEngineMode && preferredCourtroomCase(requirement);
+  if (
+    suggested &&
+    parsedOutlines.length < MAX_OUTLINE_SCENES &&
+    parsedOutlines.some((item) => item.type === 'slide') &&
+    !parsedOutlines.some((item) => item.type === 'pbl')
+  ) {
+    const order = Math.max(...parsedOutlines.map((item) => item.order)) + 1;
+    const practice = ensureUniqueOutlineId(
+      makeCourtroomOutline(suggested, order),
+      new Set(parsedOutlines.map((item) => item.id)),
+    );
+    parsedOutlines.push(practice);
+    emit({ type: 'outline', data: practice, index: parsedOutlines.length - 1 });
   }
 
   return {

@@ -3,14 +3,34 @@
  * client-supplied base URL or an unmanaged provider's catalog default).
  */
 import { STATUS_CODES } from 'node:http';
+import type { Dispatcher } from 'undici';
 
 import { LLM_FETCH_TIMEOUT_MS } from '@/lib/ai/providers';
 import { createLogger } from '@/lib/logger';
 import { providerFetch, type ProviderFetchPolicy } from '@/lib/server/provider-fetch';
 import { findUnsafeNetworkTargetError } from '@/lib/server/ssrf-guard';
 import { isRejectedRedirectError } from '@/lib/utils/rejected-redirect';
+import { createPinnedAgent } from '@/lib/server/pinned-dispatcher';
+import { fetchWithRedirectValidation } from '@/lib/server/fetch-with-redirect-validation';
 
 const log = createLogger('LLM Provider Fetch');
+
+let serverConfiguredDispatcher: Dispatcher | undefined;
+
+/** Apply the configured DNS recovery to deployment-owned LLM connections. */
+export const serverConfiguredLlmFetch: typeof fetch = async (input, init) => {
+  if (!process.env.OPENMAIC_DNS_OVER_HTTPS_URL?.trim()) {
+    return fetchWithRedirectValidation(input, init);
+  }
+  serverConfiguredDispatcher ??= createPinnedAgent({
+    // Deployment-owned endpoints already permit operator-chosen local services.
+    // Retain that address policy while replacing synthetic DNS answers.
+    assertAddress: () => undefined,
+    headersTimeout: LLM_FETCH_TIMEOUT_MS,
+    bodyTimeout: LLM_FETCH_TIMEOUT_MS,
+  });
+  return fetchWithRedirectValidation(input, init, { dispatcher: serverConfiguredDispatcher });
+};
 
 // A caller-chosen endpoint runs under the operator address policy (the one
 // `validateUrlForSSRF` applied: `allowLocalNetworks` unset falls back to

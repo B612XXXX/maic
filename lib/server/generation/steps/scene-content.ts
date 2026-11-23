@@ -23,6 +23,10 @@ import { resolveVocationalActive } from '@/lib/config/feature-flags';
 import { MAX_VISION_IMAGES } from '@/lib/constants/generation';
 import { sortDocumentImagesForVision } from '@/lib/document/bundle';
 import { generatePBLV2Project } from '@/lib/pbl/v2/agents/planner';
+import {
+  generateCourtroomPracticeContent,
+  isCourtroomPracticeOutline,
+} from '@/lib/server/legal/courtroom-content';
 
 import {
   StepRefusal,
@@ -60,6 +64,7 @@ export interface SceneContentInput {
   targetLanguage?: string;
   /** The model of the outline type's scene-content stage. */
   model: StepLanguageModel;
+  assessment?: { ownerId: string; selectionKey: string; courseKey?: string; materials?: string };
 }
 
 export type SceneContentRefusal = 'generation-failed';
@@ -154,6 +159,27 @@ export async function generateSceneContent(
   const effectiveOutline = applyOutlineFallbacks(outline, !!languageModel, {
     allowProceduralSkill: vocationalActive,
   });
+
+  if (isCourtroomPracticeOutline(effectiveOutline)) {
+    const content = await generateCourtroomPracticeContent(effectiveOutline, aiCall, {
+      languageDirective,
+      targetLanguage: input.targetLanguage,
+      signal: ctx.signal,
+    });
+    return { content, effectiveOutline };
+  }
+
+  if (effectiveOutline.type === 'quiz' && input.assessment) {
+    const { generateAssessment } = await import('@/lib/server/legal/assessment-service');
+    const selected = await generateAssessment({
+      ...input.assessment,
+      outline: effectiveOutline,
+      aiCall,
+      languageDirective,
+      signal: ctx.signal,
+    });
+    return { content: { questions: selected.questions }, effectiveOutline };
+  }
 
   // ── Filter images assigned to this outline ──
   let assignedImages: PdfImage[] | undefined;

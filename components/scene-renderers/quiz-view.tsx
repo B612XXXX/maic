@@ -114,6 +114,9 @@ async function gradeShortAnswerQuestion(
 
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = (await res.json()) as { score: number; comment: string };
+    if (!Number.isFinite(data.score) || typeof data.comment !== 'string') {
+      throw new Error('Incomplete grading response');
+    }
     const earned = Math.max(0, Math.min(pts, data.score));
     return {
       questionId: q.id,
@@ -124,17 +127,7 @@ async function gradeShortAnswerQuestion(
     };
   } catch (err) {
     log.error('[quiz-view] AI grading failed for', q.id, err);
-    // Fallback: give half credit
-    return {
-      questionId: q.id,
-      correct: null,
-      status: 'incorrect',
-      earned: Math.round(pts * 0.5),
-      aiComment:
-        language === 'zh-CN'
-          ? '评分服务暂时不可用，已给予基础分。'
-          : 'Grading service unavailable. Base score given.',
-    };
+    throw err;
   }
 }
 
@@ -699,6 +692,9 @@ export function QuizView({ questions, sceneId, stageId }: QuizViewProps) {
   const [runtimeGate, setRuntimeGate] = useState<QuizRuntimeGate>({ status: 'loading' });
   const [hydrationVersion, setHydrationVersion] = useState(0);
   const [retrying, setRetrying] = useState(false);
+  const [gradingError, setGradingError] = useState(false);
+  const [gradingRetry, setGradingRetry] = useState(0);
+  const gradedAnswers = useRef(new Map<string, Promise<QuestionResult>>());
   const viewLifetimeRef = useRef<QuizViewLifetime | null>(null);
   viewLifetimeRef.current ??= createQuizViewLifetime();
   const viewLifetime = viewLifetimeRef.current;
@@ -791,6 +787,7 @@ export function QuizView({ questions, sceneId, stageId }: QuizViewProps) {
   useEffect(() => {
     if (phase !== 'grading') return;
     let cancelled = false;
+    setGradingError(false);
 
     (async () => {
       // 1. Grade choice questions locally (instant)
@@ -799,9 +796,21 @@ export function QuizView({ questions, sceneId, stageId }: QuizViewProps) {
       // 2. Grade short-answer questions via AI API (parallel)
       const shortAnswerQs = questions.filter(isShortAnswer);
       const aiResults = await Promise.all(
-        shortAnswerQs.map((q) =>
-          gradeShortAnswerQuestion(q, (answers[q.id] as string) ?? '', locale),
-        ),
+        shortAnswerQs.map(async (q) => {
+          const key = `${attemptId}:${q.id}`;
+          const cached = gradedAnswers.current.get(key);
+          if (cached) return cached;
+          const pending = gradeShortAnswerQuestion(
+            q,
+            (answers[q.id] as string) ?? '',
+            locale,
+          ).catch((error) => {
+            gradedAnswers.current.delete(key);
+            throw error;
+          });
+          gradedAnswers.current.set(key, pending);
+          return pending;
+        }),
       );
 
       if (cancelled) return;
@@ -830,12 +839,15 @@ export function QuizView({ questions, sceneId, stageId }: QuizViewProps) {
       if (cancelled) return;
       setResults(ordered);
       setPhase('reviewing');
-    })();
+    })().catch((error) => {
+      log.warn('Quiz feedback is pending', error);
+      if (!cancelled) setGradingError(true);
+    });
 
     return () => {
       cancelled = true;
     };
-  }, [phase, questions, answers, locale, sceneId, stageId, attemptId, runtimeWriter]);
+  }, [phase, questions, answers, locale, sceneId, stageId, attemptId, runtimeWriter, gradingRetry]);
 
   const handleRetry = useCallback(async () => {
     if (!attemptId || retrying) return;
@@ -1010,9 +1022,25 @@ export function QuizView({ questions, sceneId, stageId }: QuizViewProps) {
             </motion.div>
             <div className="text-center">
               <p className="text-base font-semibold text-gray-700 dark:text-gray-200">
-                {t('quiz.aiGrading')}
+                {gradingError
+                  ? locale === 'zh-CN'
+                    ? '反馈暂未完成，答案已保存'
+                    : 'Feedback is pending. Your answers are saved.'
+                  : t('quiz.aiGrading')}
               </p>
-              <p className="text-sm text-gray-400 mt-1">{t('quiz.aiGradingWait')}</p>
+              {gradingError ? (
+                <button
+                  className="mt-3 text-sm text-violet-600 underline"
+                  onClick={() => {
+                    setGradingError(false);
+                    setGradingRetry((value) => value + 1);
+                  }}
+                >
+                  {locale === 'zh-CN' ? '重试反馈' : 'Retry feedback'}
+                </button>
+              ) : (
+                <p className="text-sm text-gray-400 mt-1">{t('quiz.aiGradingWait')}</p>
+              )}
             </div>
             <div className="flex gap-1 mt-2">
               {[0, 1, 2].map((i) => (

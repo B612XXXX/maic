@@ -23,10 +23,14 @@ import { createSSEResponse } from '@/lib/pbl/v2/api/sse';
 import { applyRequestLocaleToProject } from '@/lib/pbl/v2/api/locale';
 import { runSimulatorTurn, type SimulatorPhase } from '@/lib/pbl/v2/agents/simulator';
 import type { PBLProjectV2 } from '@/lib/pbl/v2/types';
+import {
+  withCourtroomRuntimeProject,
+  type CourtroomRuntimeScope,
+} from '@/lib/server/legal/courtroom-runtime';
 
 const log = createLogger('PBL v2 Simulator API');
 
-interface SimulatorRequest {
+interface SimulatorRequest extends CourtroomRuntimeScope {
   project: PBLProjectV2;
   userMessage?: string;
   /** 'greeting' opens the scene (narration + character first line);
@@ -45,7 +49,10 @@ export async function POST(req: NextRequest) {
   if (!body?.project) {
     return apiError('MISSING_REQUIRED_FIELD', 400, '`project` is required.');
   }
+  return withCourtroomRuntimeProject(req, body, (project) => simulate(req, { ...body, project }));
+}
 
+async function simulate(req: NextRequest, body: SimulatorRequest) {
   let resolved;
   try {
     resolved = await resolveModelFromRequest(req, body, 'pbl-v2-runtime:simulator');

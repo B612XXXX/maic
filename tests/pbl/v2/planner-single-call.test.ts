@@ -487,6 +487,29 @@ function validScenarioOutput(overrides?: { dropCharacters?: boolean }): string {
 }
 
 describe('PBL v2 single-call planner — scenario roleplay', () => {
+  it('retains the chosen courtroom presentation and its authored case documents', async () => {
+    const outline = scenarioOutline();
+    outline.pblConfig = { ...outline.pblConfig!, presentation: 'courtroom' };
+    const response = JSON.parse(validScenarioOutput());
+    response.scenario.presentation = 'standard';
+    response.milestones[0].documents = [
+      { title: 'Exhibit A', content: 'The record has one signed receipt.' },
+    ];
+    const project = await generatePBLV2ProjectSingleCall(
+      scenarioInput({ outline }),
+      textModel(JSON.stringify(response)),
+      callLLM,
+    );
+    expect(project.workspacePresentation).toBe('courtroom');
+    expect(project.milestones[0].documents).toEqual([
+      {
+        id: expect.any(String),
+        docType: 'markdown',
+        title: 'Exhibit A',
+        content: 'The record has one signed receipt.',
+      },
+    ]);
+  });
   it('hydrates the scenario block, stages, and beats from one JSON response', async () => {
     const project = await generatePBLV2ProjectSingleCall(
       scenarioInput(),

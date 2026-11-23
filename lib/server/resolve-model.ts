@@ -15,8 +15,7 @@ import {
   resolveProxy,
 } from '@/lib/server/provider-config';
 import { validateClientBaseUrl, validateUrlForSSRF } from '@/lib/server/ssrf-guard';
-import { fetchWithRedirectValidation } from '@/lib/server/fetch-with-redirect-validation';
-import { clientBaseUrlLlmFetch } from '@/lib/server/llm-provider-fetch';
+import { clientBaseUrlLlmFetch, serverConfiguredLlmFetch } from '@/lib/server/llm-provider-fetch';
 import {
   getUserStageRoute,
   parseUserStageRoutes,
@@ -191,7 +190,7 @@ export async function resolveRequestedModel(
     // A caller-chosen endpoint is pinned and refuses redirects (see
     // lib/server/llm-provider-fetch.ts). Operator-configured endpoints keep the
     // transport that re-validates every redirect hop.
-    fetchImpl: clientEndpoint ? clientBaseUrlLlmFetch : fetchWithRedirectValidation,
+    fetchImpl: clientEndpoint ? clientBaseUrlLlmFetch : serverConfiguredLlmFetch,
   });
 
   // A user route carries its own ThinkingConfig; the client's thinking belongs

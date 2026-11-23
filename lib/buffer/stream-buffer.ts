@@ -1,4 +1,5 @@
 import type { DirectorState } from '@/lib/types/chat';
+import type { CourtroomOffer } from '@/lib/legal/courtroom';
 
 /**
  * StreamBuffer — unified presentation pacing layer.
@@ -74,6 +75,7 @@ export interface DoneItem {
   sessionClosed?: boolean;
   endReason?: string;
   directorState?: DirectorState;
+  courtroomOffer?: CourtroomOffer;
 }
 
 export interface ErrorItem {
@@ -128,6 +130,7 @@ export interface StreamBufferCallbacks {
     sessionClosed?: boolean;
     endReason?: string;
     directorState?: DirectorState;
+    courtroomOffer?: CourtroomOffer;
   }): void;
   onError(message: string): void;
   onSegmentSealed?: (
@@ -283,6 +286,7 @@ export class StreamBuffer {
     sessionClosed?: boolean;
     endReason?: string;
     directorState?: DirectorState;
+    courtroomOffer?: CourtroomOffer;
   }): void {
     if (this._disposed) return;
     this.sealLastText();

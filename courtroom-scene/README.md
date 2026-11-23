@@ -1,48 +1,52 @@
-# 模拟法庭场景设计
+# 模拟法庭场景素材与预览
 
-2026-11-03，独立视觉与交互预览。双击本目录 `打开法庭预览.cmd` 或 `index.html` 即可在默认浏览器打开，无需安装依赖或启动服务。打开即显示全部示例角色，默认高亮你的角色。
+更新：2026-11-19。本目录用于视觉与交互预览；课堂里的 React 法庭视图复用其背景素材。法考短练的运行逻辑见[实现设计](../docs/legal-learning-implementation-design.md)。
 
-## 本轮范围
+当前有两个不同入口：
 
-- 按最新选择采用疏朗的长桌布局，画风扁平化，压低家具厚度与阴影，保留木质描边、米金色调。双方当事人及代理人分别同坐左右长桌，中央展示证据。
-- 背景、角色、角色名牌、区域文字、证据交互分别渲染。所有人物为独立元素。
-- 普通角色为无五官、无服装细节的纯黑人形。真实学生和参与演练的模拟学生使用各自头像。
-- 当前角色从底部锚点放大 1.2 倍，附淡金色侧影，名牌保持原尺寸。支持减少动态效果的系统偏好。
-- 民事、刑事和精简演练三个示例展示角色数量、身份与学生位置变化。这些是界面示例，不代表通用庭审程序。
-- 中央文书与图片缩略图可打开详情，支持缩放、滚动、Esc 关闭、关闭后焦点返回。查看证据不会改变发言角色。
-- 旁听席为空置背景。
+- 本目录的 index.html：静态示例，可切换案件、角色高亮与材料，没有真实课堂或 LLM 状态。
+- components/scene-renderers/pbl/v2/courtroom.tsx：课堂 PBL 情景模拟中的 React 视图，显示实际课程角色、用户资料和阶段文档。
 
-底部控制用于设计检查：切换示例、下一位发言、清空高亮、启停模拟学生头像、试用本地自定义头像。上传仅在当前浏览器内存显示，刷新即恢复，文件不发送到服务器。
+课堂中的法庭舞台在角色扮演阶段显示；默认规划与回退规划都保留法庭展示偏好。准备与复盘可从简报查看共同案卷。手动切换外观不会加载新案卷或改变评价。查看[短练试用说明](../docs/courtroom-preview-and-tryout.md)。
 
-## 后续接入
+## 静态预览
 
-当前为独立预览，尚未连接真实课堂、LLM、用户账户或证据库。预设头像复制自参考项目，不能把预览默认头像当作当前登录学生头像。
+双击 打开法庭预览.cmd 或 index.html，无需依赖、数据库或模型。预览默认显示全部示例角色，可切换民事、刑事与精简布局。这些是视觉样例，不代表相应庭审程序已实现。
 
-预留的视图接口：
+- 背景、人物、名牌、材料和发言状态分层渲染。
+- 普通角色使用简化人形，学生与模拟学生可显示头像。
+- 当前角色放大高亮，支持减少动态效果的偏好。
+- 材料详情支持缩放、滚动、Esc 关闭和焦点返回。
+- 上传的自定义头像仅在浏览器内存中显示，刷新恢复。
+- 三个静态示例共用预览材料，不能当成真实课程的案件库。
+
+## 预览接口与课堂职责
+
+下列接口只用于本目录的静态演示，不承担课程运行：
 
 ```js
-courtroomScene.setUserProfile({ avatar: currentProfile.avatar, nickname: currentProfile.nickname });
-courtroomScene.setActiveRole(currentCourtRoleId); // 轮到某角色时调用；null 清空
-courtroomScene.setScene({ name, labels, roles }); // 数据结构参见 scene.js
+courtroomScene.setUserProfile({ avatar, nickname });
+courtroomScene.setActiveRole(roleId); // null 清空
+courtroomScene.setScene({ name, labels, roles });
 ```
 
-真实接入时将课堂 participant/agent ID 映射到法庭 role ID，头像读取 `useUserProfileStore` 当前值，模拟学生头像来自课堂 roster。LLM 决定角色与流程，视图仅显示传入状态；演示按钮不是生产调度器。
+正式课堂读取自己的课程文档和学习状态。短练由服务端实践构建器写入案卷，学生、一个 AI 对手、导师和评价读取该课程中的共同材料。静态 `scene.js` 不参与课程运行。
 
-参考代码：`D:/project/OpenMAIC-main/lib/store/user-profile.ts`、`lib/playback/derived-state.ts`、`lib/chat/pi/director-loop.ts`。证据详情目前是本地视觉实现，后续接入项目资料详情能力。
+运行状态继续复用 PBL runtime。法官、证人、私有证据和程序模板待综合训练需求验证后再决定。
 
-当前背景家具为一张美术底图，可动态变化的是角色人数、席位名称、头像与发言状态；若后续案件需要增删整张桌子，应把家具拆成独立美术层并新增位置配置。当前画面先验证已确定的法庭结构。
+当前家具为整张底图，角色和名牌可变，桌子布局不可任意增删。只有实际场景需要变化时才拆家具层；美术结构不决定法律角色或程序。
 
 ## 文件
 
-- `index.html`、`scene.css`、`scene.js`：独立预览。
-- `assets/courtroom-background-flat.png`：当前使用的扁平化长桌布局背景。
-- `assets/courtroom-background-v2.png`：上一轮俯视布局草稿，当前页面未引用。
-- `assets/courtroom-background.png`：较早的视角草稿，留存供比较，当前页面未引用。
-- `assets/user.png`、`assets/student.png`：项目预设头像示例。
-- `assets/contract.svg`、`assets/receipt.svg`：可完整查看的教学虚构材料。
-- `image-prompt-flat.txt`：当前背景使用的内置 imagegen 提示词及扁平化修订提示词。
-- `image-prompt.txt`：上一轮背景提示词留档。
+- index.html、scene.css、scene.js：独立预览。
+- assets/courtroom-background-flat.png：当前扁平布局背景。
+- assets/courtroom-background-v2.png、courtroom-background.png：历史视觉草稿，当前预览未使用。
+- assets/user.png、student.png：预设头像示例。
+- assets/contract.svg、receipt.svg：教学虚构材料。
+- image-prompt-flat.txt、image-prompt.txt：美术生成与修订提示记录。
 
-## 检查记录
+## 验证范围
 
-已检查 JavaScript 语法、本地静态资源引用及示例 SVG 格式。浏览器工具禁止打开 file 协议，因此本轮未完成实际浏览器交互与截图验证；请本地双击 index.html 预览。
+2026-11-04 的历史浏览器检查覆盖静态页面、角色、材料、缩放和关闭行为；2026-11-09 接入课堂 React 视图。本轮未重做静态预览验证。手机专用布局、证据披露与完整庭审仍未实现。
+
+具体实现状态见[实现设计](../docs/legal-learning-implementation-design.md)，建议顺序见[制作计划](../制作计划.md)。

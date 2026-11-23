@@ -88,6 +88,7 @@ Output **exactly one JSON object** and nothing else. No markdown, no ```json fen
   "instructorRole": { "name": string, "description": string, "systemPrompt": string },
   "scenario": {
     "setting": string,
+    "presentation": "standard" | "courtroom",        // OPTIONAL; courtroom for actual legal roleplay only
     "goal": string,                                // OPTIONAL
     "rules": string,                               // OPTIONAL (required for rule-based scenarios)
     "learnerRole": string,                         // OPTIONAL
@@ -101,6 +102,7 @@ Output **exactly one JSON object** and nothing else. No markdown, no ```json fen
       "title": string, "description": string, "briefing": string,
       "completionCriteria": string, "debrief": string,
       "scenarioStage": "prep" | "roleplay" | "wrapup",
+      "documents": [{ "title": string, "content": string }], // OPTIONAL; courtroom shared fact materials belong in prep
       "microtasks": [
         {
           "title": string, "description": string,

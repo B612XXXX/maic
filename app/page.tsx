@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef, useDeferredValue } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   ArrowUp,
@@ -659,6 +660,12 @@ function HomePage() {
         className="fixed top-4 right-4 z-50 flex items-center gap-1 bg-white/60 dark:bg-gray-800/60 backdrop-blur-md px-2 py-1.5 rounded-full border border-gray-100/50 dark:border-gray-700/50 shadow-sm"
       >
         {/* Language Selector */}
+        <Link
+          href="/question-bank"
+          className="rounded-full px-3 py-2 text-sm text-muted-foreground hover:text-foreground"
+        >
+          法学题库
+        </Link>
         <LanguageSwitcher onOpen={() => setThemeOpen(false)} />
 
         <div className="w-[1px] h-4 bg-gray-200 dark:bg-gray-700" />

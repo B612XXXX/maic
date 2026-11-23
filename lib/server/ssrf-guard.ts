@@ -7,6 +7,7 @@
 import { promises as dns } from 'node:dns';
 import { isIP } from 'node:net';
 import ipaddr from 'ipaddr.js';
+import { resolveSyntheticDnsAnswers } from '@/lib/server/outbound-dns';
 
 const CLOUD_METADATA_HOSTNAMES = new Set(['metadata.google.internal']);
 // Instance metadata and credential endpoints. A fixed list, not a general
@@ -210,7 +211,12 @@ async function lookupWithTimeout(
     timer = setTimeout(() => resolve(null), timeoutMs);
   });
   try {
-    return await Promise.race([dns.lookup(hostname, { all: true, verbatim: true }), timeout]);
+    return await Promise.race([
+      dns
+        .lookup(hostname, { all: true, verbatim: true })
+        .then((addresses) => resolveSyntheticDnsAnswers(hostname, addresses)),
+      timeout,
+    ]);
   } finally {
     if (timer) clearTimeout(timer);
   }
@@ -563,7 +569,10 @@ export async function validateUrlForSSRFWithPolicy(
 
   let resolvedAddresses: Array<{ address: string; family: number }>;
   try {
-    resolvedAddresses = await dns.lookup(hostname, { all: true, verbatim: true });
+    resolvedAddresses = await resolveSyntheticDnsAnswers(
+      hostname,
+      await dns.lookup(hostname, { all: true, verbatim: true }),
+    );
   } catch {
     return 'Unable to verify hostname safety';
   }

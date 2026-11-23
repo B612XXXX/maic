@@ -539,6 +539,8 @@ export interface PBLPendingTaskCompletion {
 export type PBLProjectV2 = RuntimeOverlay<
   ContractPBLProject,
   {
+    /** Learner preference, persisted in runtime even while the course document is generation-fenced. */
+    workspacePresentationOverride?: 'standard' | 'courtroom';
     milestones: PBLMilestone[];
     submissions: PBLSubmission[];
     evaluations: PBLEvaluation[];

@@ -1,5 +1,7 @@
 'use client';
 
+import { CourtroomReturnLink } from './courtroom-return-link';
+
 /**
  * PBL v2 — Completion report.
  *
@@ -127,13 +129,18 @@ export function PBLV2Completion({ project, onBack }: Props) {
         }));
 
   return (
-    <div className="relative h-full w-full overflow-y-auto bg-[radial-gradient(circle_at_20%_10%,rgba(124,92,255,0.18),transparent_32%),radial-gradient(circle_at_88%_0%,rgba(34,211,238,0.14),transparent_30%),linear-gradient(135deg,#0b1220_0%,#111c33_52%,#0a1020_100%)] text-slate-100">
+    <div className="relative h-full w-full overflow-y-auto bg-[radial-gradient(circle_at_20%_10%,rgba(163,108,38,0.18),transparent_32%),radial-gradient(circle_at_88%_0%,rgba(192,148,82,0.14),transparent_30%),linear-gradient(135deg,#f6f0e6_0%,#efe0c9_52%,#f8f1e6_100%)] text-foreground">
       <div className="m-auto w-full max-w-6xl px-8 py-10">
+        {project.courtroomPractice?.returnStageId && (
+          <div className="mb-4 inline-flex pr-3">
+            <CourtroomReturnLink stageId={project.courtroomPractice.returnStageId} />
+          </div>
+        )}
         {onBack && (
           <button
             type="button"
             onClick={onBack}
-            className="mb-4 inline-flex items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-xs font-medium text-slate-200 transition hover:bg-white/[0.08]"
+            className="mb-4 inline-flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-xs font-medium text-foreground transition hover:bg-card"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
             {t('pbl.v2.completion.backToWorkspace')}
@@ -144,8 +151,8 @@ export function PBLV2Completion({ project, onBack }: Props) {
         <CelebrationHeader />
 
         {/* ── Hero banner ── */}
-        <section className="relative overflow-hidden rounded-3xl border border-white/[0.08] bg-white/[0.045] p-7 shadow-[0_12px_40px_rgba(0,0,0,0.20)] backdrop-blur-xl">
-          <div className="mb-3 flex flex-wrap items-center gap-2 text-xs font-bold uppercase tracking-wider text-cyan-200/90">
+        <section className="relative overflow-hidden rounded-3xl border border-border bg-card p-7 shadow-[0_12px_40px_rgba(0,0,0,0.20)] backdrop-blur-xl">
+          <div className="mb-3 flex flex-wrap items-center gap-2 text-xs font-bold uppercase tracking-wider text-primary">
             <span className="inline-flex items-center gap-2">
               <Trophy className="h-4 w-4 text-amber-300" />
               {t('pbl.v2.completion.title')}
@@ -153,11 +160,11 @@ export function PBLV2Completion({ project, onBack }: Props) {
           </div>
           <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
             <div>
-              <h1 className="text-3xl font-bold tracking-tight text-white">{project.title}</h1>
+              <h1 className="text-3xl font-bold tracking-tight text-foreground">{project.title}</h1>
               {heroCaption && (
-                <p className="mt-2 text-sm font-medium text-cyan-200/80">{heroCaption}</p>
+                <p className="mt-2 text-sm font-medium text-primary">{heroCaption}</p>
               )}
-              <p className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-300/90">
+              <p className="mt-3 max-w-2xl text-sm leading-relaxed text-foreground">
                 {heroSummary}
               </p>
             </div>
@@ -168,8 +175,8 @@ export function PBLV2Completion({ project, onBack }: Props) {
                 </div>
                 <div className="flex items-center gap-1 text-amber-300">
                   <Star className="h-4 w-4 fill-current" />
-                  <span className="text-2xl font-bold text-white">{report.stars}</span>
-                  <span className="text-sm text-amber-100/80">/ 5</span>
+                  <span className="text-2xl font-bold text-foreground">{report.stars}</span>
+                  <span className="text-sm text-amber-800/80">/ 5</span>
                 </div>
               </div>
             )}
@@ -184,12 +191,12 @@ export function PBLV2Completion({ project, onBack }: Props) {
         )}
 
         {/* ── What's next ── */}
-        <section className="mt-4 rounded-2xl border border-white/[0.07] bg-white/[0.035] p-5">
-          <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-100">
-            <Compass className="h-4 w-4 text-cyan-300" />
+        <section className="mt-4 rounded-2xl border border-border bg-card p-5">
+          <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
+            <Compass className="h-4 w-4 text-primary" />
             {t('pbl.v2.completion.whatsNext')}
           </div>
-          <p className="text-sm leading-relaxed text-slate-300">
+          <p className="text-sm leading-relaxed text-foreground">
             {report.whatsNext ?? t('pbl.v2.completion.noWhatsNext')}
           </p>
         </section>
@@ -258,9 +265,9 @@ function StandardCompletionBody({
 
       {/* ── Stage review ── */}
       {stats.stageDetails.length > 0 && (
-        <section className="mt-4 rounded-2xl border border-white/[0.07] bg-white/[0.035] p-5">
-          <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-slate-100">
-            <ShieldCheck className="h-4 w-4 text-cyan-300" />
+        <section className="mt-4 rounded-2xl border border-border bg-card p-5">
+          <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-foreground">
+            <ShieldCheck className="h-4 w-4 text-primary" />
             {t('pbl.v2.completion.stageReview')}
           </div>
           <ol className="grid gap-3 md:grid-cols-2">
@@ -273,13 +280,13 @@ function StandardCompletionBody({
 
       {stats.highlights.length > 0 && (
         <section className="mt-4 rounded-2xl border border-amber-200/15 bg-amber-300/[0.05] p-5">
-          <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-amber-100">
+          <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-amber-800">
             <Award className="h-4 w-4 text-amber-300" />
             {t('pbl.v2.completion.highlightsTitle')}
           </div>
           <ul className="space-y-2">
             {stats.highlights.map((h, idx) => (
-              <li key={idx} className="text-sm leading-relaxed text-slate-200">
+              <li key={idx} className="text-sm leading-relaxed text-foreground">
                 {formatHighlight(h, t)}
               </li>
             ))}
@@ -348,12 +355,12 @@ function ScenarioCompletionBody({
 
       {/* ── Per-act goal review (externalised hidden goals) ── */}
       {cov && (
-        <section className="mt-4 rounded-2xl border border-white/[0.07] bg-white/[0.035] p-5">
-          <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-slate-100">
-            <Target className="h-4 w-4 text-cyan-300" />
+        <section className="mt-4 rounded-2xl border border-border bg-card p-5">
+          <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-foreground">
+            <Target className="h-4 w-4 text-primary" />
             {t('pbl.v2.completion.scenario.goalReviewTitle')}
           </div>
-          <p className="mb-4 text-xs leading-relaxed text-slate-400">
+          <p className="mb-4 text-xs leading-relaxed text-muted-foreground">
             {t('pbl.v2.completion.scenario.goalReviewHint', {
               achieved: cov.achieved,
               total: cov.total,
@@ -374,12 +381,12 @@ function ScenarioCompletionBody({
           review survives instead of dropping to a bare narrative. Mutually
           exclusive with the scored review above. */}
       {!cov && stats.goalScaffold && stats.goalScaffold.length > 0 && (
-        <section className="mt-4 rounded-2xl border border-white/[0.07] bg-white/[0.035] p-5">
-          <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-slate-100">
-            <Target className="h-4 w-4 text-cyan-300" />
+        <section className="mt-4 rounded-2xl border border-border bg-card p-5">
+          <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-foreground">
+            <Target className="h-4 w-4 text-primary" />
             {t('pbl.v2.completion.scenario.goalListTitle')}
           </div>
-          <p className="mb-4 text-xs leading-relaxed text-slate-400">
+          <p className="mb-4 text-xs leading-relaxed text-muted-foreground">
             {t('pbl.v2.completion.scenario.goalListHint')}
           </p>
           <ol className="grid gap-3 md:grid-cols-2">
@@ -392,7 +399,7 @@ function ScenarioCompletionBody({
 
       {/* ── Cast ── */}
       {stats.characterNames.length > 0 && (
-        <p className="mt-3 px-1 text-xs text-slate-400">
+        <p className="mt-3 px-1 text-xs text-muted-foreground">
           {t('pbl.v2.completion.scenario.castLabel', {
             names: stats.characterNames.join('、'),
           })}
@@ -510,12 +517,12 @@ function StatCard({
   readonly value: string;
 }) {
   return (
-    <div className="rounded-2xl border border-white/[0.06] bg-white/[0.035] px-4 py-3.5 text-center transition-colors hover:bg-white/[0.055]">
-      <div className="mb-1.5 inline-flex items-center justify-center rounded-lg bg-white/[0.06] p-1.5 text-cyan-300/90">
+    <div className="rounded-2xl border border-border bg-card px-4 py-3.5 text-center transition-colors hover:bg-card">
+      <div className="mb-1.5 inline-flex items-center justify-center rounded-lg bg-card p-1.5 text-primary">
         {icon}
       </div>
-      <div className="text-xl font-bold text-white">{value}</div>
-      <div className="mt-0.5 text-[11px] text-slate-400">{label}</div>
+      <div className="text-xl font-bold text-foreground">{value}</div>
+      <div className="mt-0.5 text-[11px] text-muted-foreground">{label}</div>
     </div>
   );
 }
@@ -532,25 +539,25 @@ function ActGoalReviewItem({
   readonly index: number;
 }) {
   return (
-    <li className="rounded-xl border border-white/[0.05] bg-white/[0.03] px-4 py-3.5">
+    <li className="rounded-xl border border-border bg-card px-4 py-3.5">
       <div className="flex items-center gap-2">
-        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-cyan-100/[0.10] text-[11px] font-bold text-cyan-200/80">
+        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-primary/10 text-[11px] font-bold text-primary">
           {index + 1}
         </span>
-        <span className="text-sm font-medium text-slate-100">{act.actTitle}</span>
+        <span className="text-sm font-medium text-foreground">{act.actTitle}</span>
       </div>
       <ul className="mt-2.5 ml-1 space-y-2">
         {act.goals.map((g, gi) => (
           <li key={gi} className="flex gap-2 text-xs leading-relaxed">
             <GoalStatusIcon status={g.status} />
             <div className="min-w-0 flex-1">
-              <span className="text-slate-200">{g.goal}</span>
+              <span className="text-foreground">{g.goal}</span>
               {g.skillFocus && (
-                <span className="ml-1.5 inline-block rounded bg-violet-300/[0.10] px-1.5 py-0.5 text-[10px] text-violet-200">
+                <span className="ml-1.5 inline-block rounded bg-primary/10 px-1.5 py-0.5 text-[10px] text-primary">
                   {g.skillFocus}
                 </span>
               )}
-              {g.note && <p className="mt-0.5 text-[11px] text-slate-400">{g.note}</p>}
+              {g.note && <p className="mt-0.5 text-[11px] text-muted-foreground">{g.note}</p>}
             </div>
           </li>
         ))}
@@ -570,23 +577,23 @@ function ActGoalListItem({
   readonly index: number;
 }) {
   return (
-    <li className="rounded-xl border border-white/[0.05] bg-white/[0.03] px-4 py-3.5">
+    <li className="rounded-xl border border-border bg-card px-4 py-3.5">
       <div className="flex items-center gap-2">
-        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-cyan-100/[0.10] text-[11px] font-bold text-cyan-200/80">
+        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-primary/10 text-[11px] font-bold text-primary">
           {index + 1}
         </span>
-        <span className="text-sm font-medium text-slate-100">{act.actTitle}</span>
+        <span className="text-sm font-medium text-foreground">{act.actTitle}</span>
       </div>
       <ul className="mt-2.5 ml-1 space-y-2">
         {act.goals.map((g, gi) => (
           <li key={gi} className="flex gap-2 text-xs leading-relaxed">
-            <span className="mt-0.5 text-slate-500" aria-hidden>
+            <span className="mt-0.5 text-muted-foreground" aria-hidden>
               •
             </span>
             <div className="min-w-0 flex-1">
-              <span className="text-slate-200">{g.goal}</span>
+              <span className="text-foreground">{g.goal}</span>
               {g.skillFocus && (
-                <span className="ml-1.5 inline-block rounded bg-violet-300/[0.10] px-1.5 py-0.5 text-[10px] text-violet-200">
+                <span className="ml-1.5 inline-block rounded bg-primary/10 px-1.5 py-0.5 text-[10px] text-primary">
                   {g.skillFocus}
                 </span>
               )}
@@ -619,7 +626,7 @@ function GoalStatusIcon({ status }: { readonly status: 'achieved' | 'partial' | 
   }
   return (
     <X
-      className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-500"
+      className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground"
       aria-label={t('pbl.v2.completion.scenario.goalMissed')}
     />
   );
@@ -637,15 +644,15 @@ function StageReviewItem({
     detail.conceptsInStage.length > 0 || detail.submissionsInStage > 0 || detail.isCoreStage;
 
   return (
-    <li className="rounded-xl border border-white/[0.05] bg-white/[0.03] px-4 py-3.5">
+    <li className="rounded-xl border border-border bg-card px-4 py-3.5">
       <div className="flex items-center gap-2">
-        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-cyan-100/[0.10] text-[11px] font-bold text-cyan-200/80">
+        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-primary/10 text-[11px] font-bold text-primary">
           {index + 1}
         </span>
-        <span className="text-sm font-medium text-slate-100">
+        <span className="text-sm font-medium text-foreground">
           {detail.milestoneTitle}
           {detail.isCoreStage && (
-            <span className="ml-1.5 rounded-full border border-violet-300/20 bg-violet-300/[0.08] px-1.5 py-0.5 text-[10px] text-violet-200">
+            <span className="ml-1.5 rounded-full border border-border bg-primary/10 px-1.5 py-0.5 text-[10px] text-primary">
               {t('pbl.v2.completion.coreStageBadge')}
             </span>
           )}
@@ -654,30 +661,30 @@ function StageReviewItem({
       {hasContent ? (
         <ul className="mt-2 ml-7 space-y-1">
           {detail.conceptsInStage.length > 0 && (
-            <li className="text-xs text-slate-400">
-              <span className="mr-1 text-emerald-300/80">+</span>
+            <li className="text-xs text-muted-foreground">
+              <span className="mr-1 text-emerald-700">+</span>
               {t('pbl.v2.completion.conceptsInStageLabel')}
               {detail.conceptsInStage.map((c, ci) => (
                 <span key={ci}>
-                  <span className="inline-block rounded bg-cyan-100/[0.08] px-1.5 py-0.5 text-[11px] text-cyan-100">
+                  <span className="inline-block rounded bg-primary/10 px-1.5 py-0.5 text-[11px] text-primary">
                     {c}
                   </span>
                   {ci < detail.conceptsInStage.length - 1 && (
-                    <span className="text-slate-500">{'、'}</span>
+                    <span className="text-muted-foreground">{'、'}</span>
                   )}
                 </span>
               ))}
             </li>
           )}
           {detail.submissionsInStage > 0 && (
-            <li className="text-xs text-slate-400">
-              <span className="mr-1 text-cyan-300/80">+</span>
+            <li className="text-xs text-muted-foreground">
+              <span className="mr-1 text-primary">+</span>
               {t('pbl.v2.completion.submissionsInStage', { count: detail.submissionsInStage })}
             </li>
           )}
           {detail.isCoreStage && detail.coreConcept && detail.synthesisQuality && (
-            <li className="text-xs text-slate-200">
-              <span className="mr-1 text-violet-300/80">+</span>
+            <li className="text-xs text-foreground">
+              <span className="mr-1 text-primary">+</span>
               {t('pbl.v2.completion.coreConceptGrasp', {
                 concept: detail.coreConcept,
                 quality: t(`pbl.v2.completion.synthesisQuality.${detail.synthesisQuality}`),
@@ -686,7 +693,9 @@ function StageReviewItem({
           )}
         </ul>
       ) : (
-        <p className="mt-1 ml-7 text-xs text-slate-500">{t('pbl.v2.completion.stageNoData')}</p>
+        <p className="mt-1 ml-7 text-xs text-muted-foreground">
+          {t('pbl.v2.completion.stageNoData')}
+        </p>
       )}
     </li>
   );
@@ -704,9 +713,9 @@ function ReportSection({
   readonly fallback: string;
 }) {
   return (
-    <section className="rounded-2xl border border-white/[0.07] bg-white/[0.035] p-5">
-      <div className="mb-3.5 flex items-center gap-2 text-sm font-semibold text-slate-100">
-        <span className="text-cyan-300">{icon}</span>
+    <section className="rounded-2xl border border-border bg-card p-5">
+      <div className="mb-3.5 flex items-center gap-2 text-sm font-semibold text-foreground">
+        <span className="text-primary">{icon}</span>
         {title}
       </div>
       {items.length ? (
@@ -714,15 +723,15 @@ function ReportSection({
           {items.map((item, idx) => (
             <li
               key={`${idx}-${item}`}
-              className="flex gap-2.5 text-sm leading-relaxed text-slate-300"
+              className="flex gap-2.5 text-sm leading-relaxed text-foreground"
             >
-              <span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-cyan-300/60" />
+              <span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-primary/10" />
               <span>{item}</span>
             </li>
           ))}
         </ul>
       ) : (
-        <p className="text-sm text-slate-400">{fallback}</p>
+        <p className="text-sm text-muted-foreground">{fallback}</p>
       )}
     </section>
   );

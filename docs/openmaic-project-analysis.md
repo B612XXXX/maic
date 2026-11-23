@@ -1,5 +1,7 @@
 # OpenMAIC 本地源码解读
 
+> 2026-11-19 状态说明：本文保留 2026-10-08 对原版参考源码的历史解读，路径与“未安装/未创建”等表述均属于当时快照，不描述当前工作树。当前工作树基于 1367289，已有题库基础、PBL 法庭视图和法考短练。实际入口和功能边界见[实现设计](legal-learning-implementation-design.md)，修复前分析见[法考学习架构审查](legal-learning-architecture-review.md)。
+
 **OpenMAIC 的核心是把学习需求变成可编辑、可播放、可交互的课程，再让 AI 教师和 AI 同学围绕课程开展教学。** 课程生成、课堂播放、实时讨论、课件编辑和资源存储通过同一套课程数据契约连接起来。
 
 本次分析日期：2026-10-08。参考源码：`D:/project/OpenMAIC-main`。分析文件：`D:/project/MAIC/docs/openmaic-project-analysis.md`。

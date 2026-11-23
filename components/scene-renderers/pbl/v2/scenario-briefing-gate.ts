@@ -16,8 +16,10 @@
  */
 
 import type { PBLProjectV2 } from '@/lib/pbl/v2/types';
+import { hasCourtroomEvidence } from '@/lib/legal/courtroom';
 
 export function shouldShowScenarioBriefing(project: PBLProjectV2): boolean {
   if (!project.scenario) return false;
+  if (hasCourtroomEvidence(project)) return true;
   return project.milestones.some((m) => m.scenarioStage === 'prep' && m.status === 'completed');
 }

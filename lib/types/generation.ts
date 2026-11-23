@@ -180,6 +180,8 @@ export interface SceneOutline {
     scenarioRoleplay?: boolean;
     /** Optional scenario brief used only when scenarioRoleplay is true. */
     scenarioBrief?: string;
+    presentation?: import('@openmaic/dsl').PBLWorkspacePresentation;
+    courtroomPractice?: import('@/lib/legal/courtroom').CourtroomPracticeId;
   };
   // Widget fields (required for type === 'interactive' in unified mode)
   widgetType?: WidgetType;

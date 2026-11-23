@@ -49,6 +49,8 @@ import { trackSubmissionScore } from '@/lib/pbl/v2/operations/runtime/dynamic-si
 import { normalizeProjectRuntime } from '@/lib/pbl/v2/operations/kernel/progress';
 import { createLogger } from '@/lib/logger';
 import { applyInstructorEvent } from './apply-instructor-event';
+import { hasCourtroomEvidence } from '@/lib/legal/courtroom';
+import { useStageStore } from '@/lib/store/stage';
 
 const log = createLogger('PBL v2 InstructorStream');
 
@@ -63,6 +65,12 @@ interface RunOptions {
 }
 
 export type StreamStatus = 'idle' | 'instructor' | 'eval-task' | 'eval-milestone' | 'eval-final';
+
+export function getCourtroomRuntimeScope(project: PBLProjectV2) {
+  if (!hasCourtroomEvidence(project)) return {};
+  const { stage, currentSceneId } = useStageStore.getState();
+  return { stageId: stage?.id, sceneId: currentSceneId };
+}
 
 export interface StreamDisplayState {
   readonly status: StreamStatus;
@@ -302,10 +310,14 @@ export async function runOneStream(args: OneStreamArgs): Promise<PBLProjectV2> {
     // localStorage unavailable; skip silently.
   }
 
+  const scope =
+    endpoint === '/api/pbl/v2/simulator' || endpoint === '/api/pbl/v2/evaluate'
+      ? getCourtroomRuntimeScope(startingProject)
+      : {};
   const res = await fetch(endpoint, {
     method: 'POST',
     headers,
-    body: JSON.stringify(body),
+    body: JSON.stringify({ ...body, ...scope }),
   });
   if (!res.body) throw new Error('Response has no readable body.');
   if (!res.ok) {

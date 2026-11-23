@@ -32,6 +32,7 @@ export interface ChatMessageMetadata {
   agentColor?: string;
   createdAt?: number;
   interrupted?: boolean;
+  courtroomOffer?: import('@/lib/legal/courtroom').CourtroomOffer;
 }
 
 /**
@@ -505,6 +506,7 @@ export type StatelessEvent =
         directorCompaction?: DirectorCompactionTrace;
         directorToolTrace?: DirectorToolTraceEntry[];
         directorState?: DirectorState;
+        courtroomOffer?: import('@/lib/legal/courtroom').CourtroomOffer;
       };
     }
   | { type: 'error'; data: { message: string } };

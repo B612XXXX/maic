@@ -31,6 +31,11 @@ import { checkScenesAgainstSkill } from './skills';
 import { mayNameAPoolAsset } from '@/lib/media/media-placeholder';
 import { isMediaPlaceholder } from '@/lib/store/media-generation';
 import { createLogger } from '@/lib/logger';
+import { CONTRACT_DELIVERY_CASE, isCourtroomPracticeId } from '@/lib/legal/courtroom';
+import {
+  generateCourtroomPracticeContent,
+  isCourtroomPracticeOutline,
+} from '@/lib/server/legal/courtroom-content';
 
 const MAX_GENERATE_SCENE_MEDIA = 8;
 const SUPPORTED_SCENE_TYPES = new Set(['slide', 'quiz', 'interactive', 'pbl']);
@@ -68,6 +73,34 @@ const SceneParams = Type.Object({
     }),
   ),
   brief: Type.String({ minLength: 1 }),
+  quizConfig: Type.Optional(
+    Type.Object({
+      questionCount: Type.Integer({ minimum: 1, maximum: 20 }),
+      difficulty: Type.Union([Type.Literal('easy'), Type.Literal('medium'), Type.Literal('hard')]),
+      questionTypes: Type.Array(
+        Type.Union([Type.Literal('single'), Type.Literal('multiple'), Type.Literal('text')]),
+        { minItems: 1 },
+      ),
+    }),
+  ),
+  pblConfig: Type.Optional(
+    Type.Object(
+      {
+        scenarioRoleplay: Type.Optional(Type.Boolean()),
+        scenarioBrief: Type.Optional(Type.String({ maxLength: 2400 })),
+        presentation: Type.Optional(
+          Type.Union([Type.Literal('standard'), Type.Literal('courtroom')]),
+        ),
+        courtroomPractice: Type.Optional(
+          Type.Union([Type.Literal(CONTRACT_DELIVERY_CASE), Type.Literal('generated')]),
+        ),
+      },
+      {
+        description:
+          'PBL pages only. For a legal-exam short exercise choose scenarioRoleplay:true, presentation:"courtroom" and courtroomPractice:"contract-delivery-v1" for contract termination/prepayment or "generated" for another suitable issue.',
+      },
+    ),
+  ),
   instruction: Type.Optional(Type.String()),
   materialFacts: Type.Optional(Type.Array(Type.String())),
   media: Type.Optional(
@@ -264,7 +297,7 @@ export function buildGenerationTools(deps: GenerationToolDeps): AgentTool<never,
     name: 'generate_scene',
     label: 'Generate page',
     description:
-      'Generate and durably persist one page from an explicit title, type, and brief. Reusing an order replaces that page. Interactive pages accept widgetType (simulation/diagram/code/game/visualization3d) plus a matching widgetOutline object; both are rejected for other page types.',
+      'Generate and durably persist one page from an explicit title, type, and brief. Reusing an order replaces that page. Interactive pages accept widgetType and widgetOutline. PBL pages accept pblConfig for authored roleplay or a short mock-trial exercise.',
     parameters: SceneParams,
     async execute(_callId, params, signal) {
       if (!Number.isInteger(params.order) || params.order < 1) {
@@ -311,6 +344,21 @@ export function buildGenerationTools(deps: GenerationToolDeps): AgentTool<never,
           true,
         );
       }
+      const pblConfig = params.pblConfig;
+      if (
+        pblConfig &&
+        (params.type !== 'pbl' ||
+          ((pblConfig.courtroomPractice !== undefined || pblConfig.presentation === 'courtroom') &&
+            pblConfig.scenarioRoleplay !== true) ||
+          (pblConfig.courtroomPractice !== undefined &&
+            !isCourtroomPracticeId(pblConfig.courtroomPractice)))
+      ) {
+        return result(
+          'pblConfig is for PBL pages. Courtroom presentation and practice require scenarioRoleplay:true and a supported case selection.',
+          { error: 'invalid-pbl-config' },
+          true,
+        );
+      }
       if (
         params.type !== 'interactive' &&
         (params.widgetType !== undefined || params.widgetOutline !== undefined)
@@ -348,6 +396,7 @@ export function buildGenerationTools(deps: GenerationToolDeps): AgentTool<never,
         type: params.type,
         description: brief,
         keyPoints: params.materialFacts ?? [],
+        ...(params.type === 'quiz' && params.quizConfig ? { quizConfig: params.quizConfig } : {}),
         ...(params.type === 'interactive' &&
         (params.widgetType !== undefined || params.widgetOutline !== undefined)
           ? {
@@ -366,6 +415,16 @@ export function buildGenerationTools(deps: GenerationToolDeps): AgentTool<never,
                 projectTopic: params.title.trim(),
                 projectDescription: params.brief.trim(),
                 targetSkills: params.materialFacts ?? [],
+                ...(pblConfig?.scenarioRoleplay !== undefined
+                  ? { scenarioRoleplay: pblConfig.scenarioRoleplay }
+                  : {}),
+                ...(pblConfig?.scenarioBrief?.trim()
+                  ? { scenarioBrief: pblConfig.scenarioBrief.trim() }
+                  : {}),
+                ...(pblConfig?.presentation ? { presentation: pblConfig.presentation } : {}),
+                ...(pblConfig?.courtroomPractice
+                  ? { courtroomPractice: pblConfig.courtroomPractice }
+                  : {}),
               },
             }
           : {}),
@@ -418,17 +477,41 @@ export function buildGenerationTools(deps: GenerationToolDeps): AgentTool<never,
       let content: Awaited<ReturnType<typeof generateSceneContent>>;
       let contentFailure: SceneContentFailureCode | undefined;
       try {
-        content = await generateSceneContent(outline, aiCallFor(sceneContentStage(params.type)), {
-          agents,
-          languageDirective: doc.stage.languageDirective ?? '',
-          allowProceduralSkill: true,
-          ...(assignedImages.length ? { assignedImages, imageMapping } : {}),
-          ...(params.instruction ? { editDirective: params.instruction } : {}),
-          ...(baseline ? { baselineContent: baseline } : {}),
-          onFailure: (failure) => {
-            contentFailure = failure.code;
-          },
-        });
+        if (params.type === 'quiz' && deps.ownerId) {
+          const { generateAssessment } = await import('@/lib/server/legal/assessment-service');
+          const selected = await generateAssessment({
+            ownerId: deps.ownerId,
+            selectionKey: `pro:${deps.sessionId ?? params.stageId}:${_callId}`,
+            courseKey: `pro:${params.stageId}`,
+            outline,
+            aiCall: aiCallFor('scene-content:quiz'),
+            languageDirective: doc.stage.languageDirective ?? '',
+            materials: [brief, ...(params.materialFacts ?? [])].join('\n'),
+            signal,
+          });
+          content = { questions: selected.questions };
+        } else if (isCourtroomPracticeOutline(outline)) {
+          content = await generateCourtroomPracticeContent(
+            outline,
+            aiCallFor('scene-content:pbl'),
+            {
+              languageDirective: doc.stage.languageDirective,
+              signal,
+            },
+          );
+        } else {
+          content = await generateSceneContent(outline, aiCallFor(sceneContentStage(params.type)), {
+            agents,
+            languageDirective: doc.stage.languageDirective ?? '',
+            allowProceduralSkill: true,
+            ...(assignedImages.length ? { assignedImages, imageMapping } : {}),
+            ...(params.instruction ? { editDirective: params.instruction } : {}),
+            ...(baseline ? { baselineContent: baseline } : {}),
+            onFailure: (failure) => {
+              contentFailure = failure.code;
+            },
+          });
+        }
       } catch (error) {
         if (error instanceof PBLGenerationError) {
           return result(

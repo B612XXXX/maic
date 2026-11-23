@@ -11,6 +11,7 @@ import { CircleStop, MessageCircleMore } from 'lucide-react';
 import { InlineActionTag } from './inline-action-tag';
 import { useUserProfileStore } from '@/lib/store/user-profile';
 import { useSoftCloseCountdown } from './use-soft-close-countdown';
+import { CourtroomOfferCard } from './courtroom-offer';
 
 /** Extended message part type covering standard + custom action parts */
 interface MessagePart {
@@ -321,6 +322,9 @@ export function ChatSessionComponent({
                   isLastMessage={isLastMessage}
                   isActive={isActive}
                 />
+                {!isUser && message.metadata?.courtroomOffer && (
+                  <CourtroomOfferCard offer={message.metadata.courtroomOffer} />
+                )}
               </div>
             </motion.div>
           );

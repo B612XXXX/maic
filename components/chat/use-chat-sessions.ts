@@ -1087,7 +1087,31 @@ export function useChatSessions(options: UseChatSessionsOptions = {}) {
             sessionClosed?: boolean;
             endReason?: string;
             directorState?: DirectorState;
+            courtroomOffer?: ChatMessageMetadata['courtroomOffer'];
           }) {
+            if (data.courtroomOffer) {
+              const offer = data.courtroomOffer;
+              setSessions((previous) =>
+                previous.map((session) => {
+                  if (session.id !== sessionId) return session;
+                  const answerIndex = session.messages.findLastIndex(
+                    (message) =>
+                      message.role === 'assistant' &&
+                      message.parts.some((part) => part.type === 'text' && part.text.trim()),
+                  );
+                  if (answerIndex < 0) return session;
+                  return {
+                    ...session,
+                    updatedAt: nextChatUpdatedAt(session),
+                    messages: session.messages.map((message, index) =>
+                      index === answerIndex
+                        ? { ...message, metadata: { ...message.metadata, courtroomOffer: offer } }
+                        : message,
+                    ),
+                  };
+                }),
+              );
+            }
             // Store done data for agent loop consumption
             loopDoneDataRef.current = {
               directorState: data.directorState,

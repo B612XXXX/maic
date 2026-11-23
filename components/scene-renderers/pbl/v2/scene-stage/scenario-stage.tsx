@@ -108,7 +108,7 @@ export function ScenarioStage({ project }: Props) {
   return (
     <div className="px-3 pt-3">
       <div
-        className="relative overflow-hidden rounded-2xl border border-white/10 shadow-[0_10px_34px_rgba(6,16,34,0.34)]"
+        className="relative overflow-hidden rounded-2xl border border-border shadow-[0_10px_34px_rgba(6,16,34,0.34)]"
         style={{ boxShadow: `inset 0 1px 0 rgba(255,255,255,0.08)` }}
       >
         <AnimatePresence initial={false}>
@@ -172,7 +172,7 @@ export function ScenarioStage({ project }: Props) {
                   className="mb-1"
                 >
                   {character?.name && (
-                    <div className="text-sm font-semibold text-white drop-shadow">
+                    <div className="text-sm font-semibold text-foreground drop-shadow">
                       {character.name}
                     </div>
                   )}
@@ -186,7 +186,7 @@ export function ScenarioStage({ project }: Props) {
                 initial={{ opacity: 0, y: -8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.7, duration: 0.5 }}
-                className="absolute right-4 top-3 max-w-[55%] text-right text-sm font-semibold text-white/90 drop-shadow"
+                className="absolute right-4 top-3 max-w-[55%] text-right text-sm font-semibold text-foreground/90 drop-shadow"
               >
                 {title}
               </motion.div>
@@ -200,7 +200,7 @@ export function ScenarioStage({ project }: Props) {
           onClick={() => setExpanded((v) => !v)}
           className={cn(
             'flex w-full items-center gap-2.5 px-3 py-2 text-left transition-colors',
-            'bg-[#101b32]/90 hover:bg-[#16233f]/90',
+            'bg-[#f9f2e8]/90 hover:bg-[#f1e3ce]/90',
           )}
         >
           <span
@@ -211,14 +211,14 @@ export function ScenarioStage({ project }: Props) {
             <CharacterAvatar name={character?.name} avatar={character?.avatar} compact />
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-xs font-semibold text-white">
+            <span className="block truncate text-xs font-semibold text-foreground">
               {character?.name ?? caption}
             </span>
-            <span className="block truncate text-[10px] text-white/55">
+            <span className="block truncate text-[10px] text-muted-foreground">
               {caption} · {title}
             </span>
           </span>
-          <span className="flex items-center gap-1 text-[10px] text-white/50">
+          <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
             {expanded ? t('pbl.v2.scene.collapse') : t('pbl.v2.scene.expand')}
             {expanded ? (
               <ChevronUp className="h-3.5 w-3.5" />

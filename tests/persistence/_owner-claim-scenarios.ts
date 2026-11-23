@@ -14,6 +14,7 @@ import { PgAgentSessionStore, ensureAgentSessionSchema } from '@openmaic/storage
 import type { ConnectableQueryable } from '@openmaic/storage/server/reference';
 import { PgUserSkillStore, ensureUserSkillSchema } from '@openmaic/storage/skill/pg';
 import { expect } from 'vitest';
+import { LegalAssessmentStore } from '@/lib/persistence/legal-assessment';
 
 import { validateAppScene, validateAppStage } from '@/lib/document-store/validators';
 import {
@@ -325,6 +326,19 @@ async function merges(pool: ClaimScenarioPool) {
 /** Everything moves, the claimed courses keep rendering their media, and nothing stays behind. */
 export async function fullClaimScenario(h: ClaimHarness): Promise<void> {
   const seeded = await seedAnonymousWork(h);
+  const legal = new LegalAssessmentStore(h.pool, h.provider.withTransaction);
+  await legal.import(ANON, [
+    {
+      topic: '合同履行',
+      difficulty: 'medium',
+      enabled: true,
+      tags: [],
+      sourceTitle: '',
+      sourceUrl: '',
+      question: { type: 'short_answer', question: '说明合同履行', points: 1 },
+    },
+  ]);
+  await legal.claim(ANON, 'claim-practice', 'spec');
   // An upgraded installation still carrying the retired column, filled in as
   // an older version wrote it.
   await addLegacyOwnerColumn(h.pool);
@@ -383,9 +397,19 @@ export async function fullClaimScenario(h: ClaimHarness): Promise<void> {
       'workspace-model-config': 1,
       // The account kept its own "study-buddy".
       'custom-agents': 1,
+      'legal-assessments': 1,
     },
   });
   expect(await rowsUnder(h.pool, ANON)).toEqual(NOTHING);
+  expect(await legal.list(ANON)).toEqual([]);
+  expect(await legal.list(ACCOUNT)).toHaveLength(1);
+  expect(
+    (
+      await h.pool.query<{ owner_id: string }>(
+        "SELECT owner_id FROM legal_assessment_selections WHERE selection_key = 'claim-practice'",
+      )
+    ).rows,
+  ).toEqual([{ owner_id: ACCOUNT }]);
   expect((await rowsUnder(h.pool, ACCOUNT)).workspaceModelConfig).toBe(1);
   const accountAgents = await h.pool.query<{ agent_id: string; name: string }>(
     `SELECT agent_id, config->>'name' AS name FROM owner_agents

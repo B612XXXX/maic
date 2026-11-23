@@ -24,6 +24,8 @@ import type { PBLProjectV2, PBLScenarioCharacter } from '@/lib/pbl/v2/types';
 import { trimmedPBLText } from '@/lib/pbl/v2/readers';
 import { useI18n } from '@/lib/hooks/use-i18n';
 import { sanitizeSceneVisual } from './scene-types';
+import { getScenarioDocuments, hasCourtroomEvidence } from '@/lib/legal/courtroom';
+import { MarkdownText } from '../markdown-text';
 
 interface Props {
   readonly project: PBLProjectV2;
@@ -41,6 +43,7 @@ export function ScenarioBriefing({ project }: Props) {
   const goal = trimmedPBLText(scenario.goal);
   const rules = trimmedPBLText(scenario.rules);
   const characters = scenario.characters ?? [];
+  const documents = hasCourtroomEvidence(project) ? getScenarioDocuments(project) : [];
 
   return (
     <aside className="pbl-v2-scroll-fade h-full space-y-4 overflow-y-auto p-4">
@@ -77,6 +80,19 @@ export function ScenarioBriefing({ project }: Props) {
           label={t('pbl.v2.briefing.goal')}
         >
           <BriefingText text={goal} />
+        </BriefingSection>
+      )}
+
+      {documents.length > 0 && (
+        <BriefingSection emoji="" icon={<BookOpen className="h-3 w-3" />} label="共同案卷">
+          <div className="space-y-3">
+            {documents.map((document) => (
+              <div key={document.id}>
+                <p className="text-xs font-medium">{document.title}</p>
+                <MarkdownText content={document.content} />
+              </div>
+            ))}
+          </div>
         </BriefingSection>
       )}
 
@@ -119,8 +135,8 @@ function BriefingSection({
   readonly children: ReactNode;
 }) {
   return (
-    <section className="rounded-xl border border-cyan-100/[0.12] bg-slate-800/[0.46] p-4 shadow-[0_12px_30px_rgba(6,16,34,0.20)]">
-      <div className="mb-2 flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-cyan-200/80">
+    <section className="rounded-xl border border-border bg-card p-4 shadow-[0_12px_30px_rgba(104,67,25,0.20)]">
+      <div className="mb-2 flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-primary">
         <span aria-hidden className="text-xs leading-none">
           {emoji}
         </span>
@@ -147,24 +163,22 @@ function CharacterCard({
   const persona = trimmedPBLText(character.persona);
   const situation = trimmedPBLText(character.situation);
   return (
-    <li className="rounded-lg border border-cyan-100/[0.12] bg-slate-700/[0.30] p-2.5">
+    <li className="rounded-lg border border-border bg-card p-2.5">
       <div className="flex items-center gap-2.5">
         <BriefingAvatar name={character.name} avatar={character.avatar} accent={accent} />
-        <span className="min-w-0 flex-1 truncate text-xs font-semibold text-white">
+        <span className="min-w-0 flex-1 truncate text-xs font-semibold text-foreground">
           {character.name}
         </span>
       </div>
       {persona && (
         <div className="mt-2 flex gap-1.5 text-[11px] leading-snug">
-          <span className="shrink-0 font-medium text-cyan-200/70">
-            {t('pbl.v2.briefing.identity')}
-          </span>
+          <span className="shrink-0 font-medium text-primary">{t('pbl.v2.briefing.identity')}</span>
           <span className="min-w-0 whitespace-pre-wrap text-foreground/80">{persona}</span>
         </div>
       )}
       {situation && (
         <div className="mt-1 flex gap-1.5 text-[11px] leading-snug">
-          <span className="shrink-0 font-medium text-cyan-200/70">
+          <span className="shrink-0 font-medium text-primary">
             {t('pbl.v2.briefing.situation')}
           </span>
           <span className="min-w-0 whitespace-pre-wrap text-foreground/80">{situation}</span>
@@ -190,7 +204,7 @@ function BriefingAvatar({
   const isImg = typeof avatar === 'string' && avatar.startsWith('/');
   return (
     <span
-      className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full text-xs font-bold text-white shadow-[0_4px_12px_rgba(0,0,0,0.3)]"
+      className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full text-xs font-bold text-foreground shadow-[0_4px_12px_rgba(0,0,0,0.3)]"
       style={{ background: accent }}
       aria-hidden
     >

@@ -71,6 +71,7 @@ export function buildDirectorPrompt(
   body: StatelessChatRequest,
   agents: AgentConfig[],
   maxAgentTurns: number,
+  canOfferCourtroom = false,
 ): string {
   const agentList = agents
     .map(
@@ -107,6 +108,11 @@ export function buildDirectorPrompt(
     '# Terminal Tool Policy',
     'Use exactly one terminal tool per loop.',
     'Use `cue_user` when the classroom should wait for the user to continue, ask something new, or answer a visible follow-up.',
+    ...(canOfferCourtroom
+      ? [
+          'Only for Chinese legal-exam learning questions: have the teacher explain the rule first. If disputed facts or evidence would help the learner test their judgment, use cue_user.courtroomTopic with one specific legal topic in Chinese. A relevant legal concept can be enough to identify the topic; the learner need not say "法考" or provide a case. Omit this field for non-legal questions, definitions, recitation, real personal disputes, longer simulations, unclear matches or a previous refusal. The UI offers practice without leaving the classroom until accepted. Do not ask the teacher to promise an exercise in its spoken answer.',
+        ]
+      : []),
     'Use `close_session` when the latest user message or immediate history clearly indicates goodbye, no more, thanks-and-done, conclusion, wrap-up, an explicit end, or a request to return to the lesson.',
     '`close_session` closes only the current Q&A/discussion side session. It does NOT mean the whole class is over unless the user explicitly says the lesson/class is over.',
     'When ending a Q&A/discussion, keep the visible agent response brief and avoid saying "class dismissed", "下课", "再见", or equivalent whole-class farewell language unless the user explicitly asks to end the entire class.',
@@ -576,7 +582,7 @@ export function toHistoryMessages(
     .filter((message): message is AgentMessage => Boolean(message));
 }
 
-function extractMessageText(message: StatelessChatRequest['messages'][number]): string {
+export function extractMessageText(message: StatelessChatRequest['messages'][number]): string {
   return (message.parts ?? [])
     .map((part) => {
       if (part.type === 'text') return part.text;

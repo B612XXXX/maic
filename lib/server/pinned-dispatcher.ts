@@ -13,6 +13,7 @@
 import { lookup as dnsLookup, type LookupAddress } from 'node:dns';
 
 import { Agent, type Dispatcher } from 'undici';
+import { resolveSyntheticDnsAnswers } from '@/lib/server/outbound-dns';
 
 import {
   allowLocalNetworksEnabled,
@@ -62,12 +63,13 @@ function makePinnedLookup(assertAddress: AddressPolicy) {
     dnsLookup(
       hostname,
       { ...options, all: true, verbatim: true },
-      (error: NodeJS.ErrnoException | null, addresses: LookupAddress[]) => {
+      async (error: NodeJS.ErrnoException | null, addresses: LookupAddress[]) => {
         if (error) {
           callback(error);
           return;
         }
         try {
+          addresses = await resolveSyntheticDnsAnswers(hostname, addresses);
           assertLookupAddresses(addresses, assertAddress);
         } catch (lookupError) {
           callback(lookupError);

@@ -2,6 +2,11 @@ import { describe, expect, it, vi } from 'vitest';
 
 const calls = vi.hoisted(() => [] as Array<{ fetchImpl?: unknown; apiKey?: string }>);
 
+vi.mock('node:dns', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('node:dns')>()),
+  promises: { lookup: vi.fn(async () => [{ address: '8.8.8.8', family: 4 }]) },
+}));
+
 vi.mock('@/lib/ai/providers', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/lib/ai/providers')>()),
   getModel: (config: { fetchImpl?: unknown; apiKey?: string }) => {
@@ -11,8 +16,8 @@ vi.mock('@/lib/ai/providers', async (importOriginal) => ({
 }));
 
 const { languageModelFor } = await import('@/lib/server/model-config/llm');
-const { clientBaseUrlLlmFetch } = await import('@/lib/server/llm-provider-fetch');
-const { fetchWithRedirectValidation } = await import('@/lib/server/fetch-with-redirect-validation');
+const { clientBaseUrlLlmFetch, serverConfiguredLlmFetch } =
+  await import('@/lib/server/llm-provider-fetch');
 
 const target = (providerSource: 'deployment' | 'workspace') => ({
   providerId: 'p',
@@ -32,6 +37,6 @@ describe('the transport a slot model gets', () => {
 
   it('keeps the operator transport for a deployment provider', async () => {
     await languageModelFor(target('deployment'));
-    expect(calls.at(-1)?.fetchImpl).toBe(fetchWithRedirectValidation);
+    expect(calls.at(-1)?.fetchImpl).toBe(serverConfiguredLlmFetch);
   });
 });

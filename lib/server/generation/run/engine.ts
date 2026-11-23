@@ -511,6 +511,16 @@ async function executeClaimedRun(
             owner,
             {
               outline: outlines[sceneIndex]!,
+              ...(outlines[sceneIndex]!.type === 'quiz'
+                ? {
+                    assessment: {
+                      ownerId: owner,
+                      selectionKey: `classic:${run.id}:${outlines[sceneIndex]!.id}`,
+                      courseKey: `classic:${run.id}`,
+                      materials: output<MaterialOutput>('material-analysis')?.pdfText,
+                    },
+                  }
+                : {}),
               ...materialImages(),
               agents: agents().agents.agents,
               languageDirective,

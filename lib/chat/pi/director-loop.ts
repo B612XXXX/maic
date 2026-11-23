@@ -6,7 +6,18 @@ import type { AgentConfig } from '@/lib/orchestration/registry/types';
 import type { AgentTurnSummary, WhiteboardActionRecord } from '@/lib/orchestration/types';
 import type { StatelessChatRequest, StatelessEvent } from '@/lib/types/chat';
 import type { ThinkingConfig } from '@/lib/types/provider';
-import { buildDirectorPrompt, buildUserPrompt, toHistoryMessages } from './prompts';
+import {
+  buildDirectorPrompt,
+  buildUserPrompt,
+  extractMessageText,
+  toHistoryMessages,
+} from './prompts';
+import {
+  COURTROOM_TOPIC_LIMIT,
+  mayConsiderCourtroomPractice,
+  preferredCourtroomCase,
+  type CourtroomOffer,
+} from '@/lib/legal/courtroom';
 import { createDirectorCompactionRuntime } from './director-compaction';
 import type { DirectorToolTraceEntry, SendEvent } from './types';
 import type { ChildRuntimeMode } from './child-runtime';
@@ -92,6 +103,20 @@ export async function runPiDirectorLoop(opts: {
     });
   })();
   const getAgentTurnCount = (): number => piAgentResponses.length;
+  const latestUser = opts.body.messages.findLast((message) => message.role === 'user');
+  const latestText = latestUser ? extractMessageText(latestUser).slice(0, 2000) : '';
+  const currentScene = opts.body.storeState.scenes.find(
+    (scene) => scene.id === requestStartCurrentScene?.sceneId,
+  );
+  const canOfferCourtroom =
+    opts.body.config.sessionType === 'qa' &&
+    !!opts.body.storeState.stage &&
+    requestStartCurrentScene?.sceneType !== 'pbl' &&
+    mayConsiderCourtroomPractice(
+      latestText,
+      `${opts.body.storeState.stage.name} ${currentScene?.title ?? ''}`,
+    );
+  let suggestedCourtroom: CourtroomOffer | undefined;
   const isTeachingSubstantiveTurn = (summary: AgentTurnSummary): boolean => {
     const agent = opts.agentConfigs.find((candidate) => candidate.id === summary.agentId);
     return (
@@ -211,12 +236,22 @@ export async function runPiDirectorLoop(opts: {
       canCueUser: hasTeachingSubstantiveTurn,
       cueUserSkipReason: 'no_substantive_teaching_turn',
       isSessionClosed: () => sessionClosed,
+      onCourtroomTopic: (raw) => {
+        if (!canOfferCourtroom) return;
+        const topic = raw.trim().replace(/\s+/g, ' ').slice(0, COURTROOM_TOPIC_LIMIT);
+        if (topic) suggestedCourtroom = { caseId: 'generated', topic };
+      },
     }),
   ];
 
   const director = buildAgent({
     streamFn,
-    systemPrompt: buildDirectorPrompt(opts.body, opts.agentConfigs, opts.maxAgentTurns),
+    systemPrompt: buildDirectorPrompt(
+      opts.body,
+      opts.agentConfigs,
+      opts.maxAgentTurns,
+      canOfferCourtroom,
+    ),
     tools,
     allowedToolNames: new Set(tools.map((tool) => tool.name)),
     history: toHistoryMessages(opts.body.messages, null),
@@ -271,6 +306,23 @@ export async function runPiDirectorLoop(opts: {
     await cueUser({ fromAgentId: piAgentResponses.at(-1)?.agentId });
   }
 
+  const proposed =
+    canOfferCourtroom &&
+    !sessionClosed &&
+    piAgentResponses.some(
+      (summary) => isTeachingSubstantiveTurn(summary) && summary.contentPreview.trim(),
+    )
+      ? (preferredCourtroomCase(latestText) ?? suggestedCourtroom)
+      : undefined;
+  const courtroomOffer =
+    proposed &&
+    !opts.body.messages.some(({ metadata }) => {
+      const previous = metadata?.courtroomOffer;
+      return previous?.caseId === proposed.caseId && previous.topic === proposed.topic;
+    })
+      ? proposed
+      : undefined;
+
   await opts.send({
     type: 'done',
     data: {
@@ -282,6 +334,7 @@ export async function runPiDirectorLoop(opts: {
       endReason,
       directorCompaction: compactionRuntime.getTrace(),
       directorToolTrace,
+      ...(courtroomOffer ? { courtroomOffer } : {}),
       directorState: {
         turnCount: getAgentTurnCount(),
         agentResponses: [...(opts.body.directorState?.agentResponses ?? []), ...piAgentResponses],

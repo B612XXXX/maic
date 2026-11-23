@@ -211,6 +211,7 @@ function buildTools(
   // SCENARIO ONLY. Whether `set_scenario` has fired. Always false for
   // ordinary PBL projects (the tool isn't even registered).
   let scenarioSet = false;
+  let sharedDocuments: PBLMilestone['documents'];
 
   // SCENARIO ONLY schema extensions. For ordinary PBL projects the
   // milestone / microtask input schemas below are byte-identical to
@@ -443,6 +444,9 @@ function buildTools(
           debrief: args.debrief,
           ...(coreConcept ? { synthesisCheck: { coreConcept } } : {}),
           ...(scenarioStage ? { scenarioStage } : {}),
+          ...(scenarioStage === 'prep' && sharedDocuments?.length
+            ? { documents: sharedDocuments }
+            : {}),
         };
         project.milestones.push(milestone);
         project.updatedAt = new Date().toISOString();
@@ -582,6 +586,24 @@ function buildTools(
     description:
       'SCENARIO ONLY. Define the role-play scenario: the concrete premise (setting), optional learning goal, optional rules + learner role, and the cast. Call exactly once, right after set_project_info and before any add_milestone. Required for scenario projects.',
     inputSchema: z.object({
+      presentation: z
+        .enum(['standard', 'courtroom'])
+        .optional()
+        .describe(
+          'Use courtroom ONLY for a mock trial / court hearing with opposing legal parties. Other scenarios use standard. This selects the workspace visual; it does not change the teaching stages.',
+        ),
+      documents: z
+        .array(
+          z.object({
+            title: z.string().trim().min(1).max(100),
+            content: z.string().trim().min(1).max(1800),
+          }),
+        )
+        .max(6)
+        .optional()
+        .describe(
+          'Courtroom only: the factual documents every party can read in prep. Do not add a reference answer.',
+        ),
       setting: z
         .string()
         .min(1)
@@ -644,6 +666,15 @@ function buildTools(
           ok: false,
           error: 'set_scenario was already called; it must only fire once.',
         };
+      }
+      project.workspacePresentation =
+        input.outline.pblConfig?.presentation ?? args.presentation ?? 'standard';
+      if (project.workspacePresentation === 'courtroom') {
+        sharedDocuments = args.documents?.map((document) => ({
+          ...document,
+          id: newId('doc'),
+          docType: 'markdown',
+        }));
       }
       const scenario: PBLScenarioConfig = {
         setting: args.setting,

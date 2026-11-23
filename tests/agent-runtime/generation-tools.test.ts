@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { Value } from 'typebox/value';
+import { CONTRACT_DELIVERY_CASE, getScenarioDocuments } from '@/lib/legal/courtroom';
+import { listSkills } from '@/lib/server/agent-runtime/skills';
 import type { AgentTool } from '@earendil-works/pi-agent-core';
 
 import type { CourseDocument, CourseStore } from '@/lib/server/agent-runtime/course-tools';
@@ -80,6 +82,46 @@ function find(tools: AgentTool<never, never>[], name: string) {
   if (!tool) throw new Error(`missing ${name}`);
   return tool;
 }
+
+it('discovers the legal skill and persists its fixed mock-trial case through the Pro tool', async () => {
+  expect((await listSkills()).find((skill) => skill.id === 'legal-courtroom')?.content).toContain(
+    CONTRACT_DELIVERY_CASE,
+  );
+  const current = state(document([]));
+  const aiCall = vi.fn(async () => {
+    throw new Error('the fixed case must not be regenerated');
+  });
+  const generate = find(buildGenerationTools(deps(current.store, { aiCall })), 'generate_scene');
+  const input = {
+    stageId: 'stage-test',
+    order: 1,
+    title: '合同解除与预付款返还',
+    type: 'pbl',
+    brief: '解释规则后练习判断',
+    pblConfig: {
+      scenarioRoleplay: true,
+      presentation: 'courtroom',
+      courtroomPractice: CONTRACT_DELIVERY_CASE,
+    },
+  };
+  expect(Value.Check(generate.parameters, input)).toBe(true);
+  const response = await generate.execute('contract', input as never);
+  expect(response.details).toMatchObject({ type: 'pbl', actionCount: 0 });
+  const content = current.get()?.scenes[0]?.content;
+  expect(content?.type).toBe('pbl');
+  if (content?.type !== 'pbl' || !content.projectV2)
+    throw new Error('courtroom scene not persisted');
+  expect(content.projectV2).toMatchObject({
+    workspacePresentation: 'courtroom',
+    courtroomPractice: { caseId: CONTRACT_DELIVERY_CASE },
+  });
+  expect(getScenarioDocuments(content.projectV2).map((item) => item.title)).toEqual([
+    '材料 1 · 合同节选',
+    '材料 2 · 付款记录',
+    '材料 3 · 沟通记录',
+  ]);
+  expect(aiCall).not.toHaveBeenCalled();
+});
 
 function deps(store: CourseStore, extra: Record<string, unknown> = {}) {
   return {

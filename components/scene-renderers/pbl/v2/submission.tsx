@@ -83,6 +83,7 @@ import { useI18n } from '@/lib/hooks/use-i18n';
 import i18n from '@/lib/i18n/config';
 import {
   assertNotStreamError,
+  getCourtroomRuntimeScope,
   isToleratedReactionStreamError,
   type StreamStatus,
 } from './use-instructor-stream';
@@ -437,6 +438,7 @@ export function PBLV2SubmissionPanel({
       startedAt: new Date().toISOString(),
     });
     let workingProject = structuredClone(snapshot);
+    const scope = getCourtroomRuntimeScope(snapshot);
     try {
       const runStream = async (
         endpoint: string,
@@ -461,7 +463,7 @@ export function PBLV2SubmissionPanel({
         const res = await fetch(endpoint, {
           method: 'POST',
           headers,
-          body: JSON.stringify(body),
+          body: JSON.stringify(endpoint === '/api/pbl/v2/evaluate' ? { ...body, ...scope } : body),
         });
         if (!res.body) throw new Error('Response has no readable body.');
         if (!res.ok) {
@@ -613,11 +615,11 @@ export function PBLV2SubmissionPanel({
     <aside className="pbl-v2-scroll-fade h-full space-y-4 overflow-y-auto p-4">
       {current ? (
         <>
-          <div className="rounded-xl border border-cyan-100/[0.12] bg-slate-800/[0.46] p-4 shadow-[0_12px_30px_rgba(6,16,34,0.20)]">
+          <div className="rounded-xl border border-border bg-card p-4 shadow-[0_12px_30px_rgba(104,67,25,0.08)]">
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
               {t('pbl.v2.submission.currentTask')}
             </div>
-            <h3 className="text-sm font-semibold text-white">
+            <h3 className="text-sm font-semibold text-foreground">
               {display?.title ?? current.task.title}
             </h3>
             {/* SCENARIO: prefer the learner-facing brief (what + why, no answer)
@@ -633,8 +635,8 @@ export function PBLV2SubmissionPanel({
           </div>
 
           {display && display.hints.length > 0 && (
-            <div className="rounded-xl border border-cyan-100/[0.12] bg-slate-800/[0.40] p-4">
-              <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-cyan-200/80 mb-2">
+            <div className="rounded-xl border border-border bg-card p-4">
+              <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-primary mb-2">
                 <Lightbulb className="w-3 h-3" />
                 {t('pbl.v2.submission.hints')}
               </div>
@@ -649,14 +651,14 @@ export function PBLV2SubmissionPanel({
             </div>
           )}
 
-          <div className="rounded-xl border border-cyan-100/[0.12] bg-slate-800/[0.46] p-3">
+          <div className="rounded-xl border border-border bg-card p-3">
             <button
               type="button"
               onClick={() => {
                 if (!submitLocked) setModalOpen(true);
               }}
               disabled={submitLocked}
-              className="flex w-full items-center justify-center gap-2 rounded-xl border border-primary/30 bg-primary px-3 py-2 text-xs font-medium text-primary-foreground shadow-[0_0_28px_rgba(155,124,255,0.26)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex w-full items-center justify-center gap-2 rounded-xl border border-primary/30 bg-primary px-3 py-2 text-xs font-medium text-primary-foreground shadow-[0_0_28px_rgba(163,108,38,0.26)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Upload className="w-3.5 h-3.5" />
               {t('pbl.v2.submission.submitOutput')}
@@ -688,7 +690,7 @@ export function PBLV2SubmissionPanel({
           </div>
         </>
       ) : (
-        <div className="rounded-xl border border-cyan-100/[0.12] bg-slate-800/[0.40] p-4 text-xs text-muted-foreground">
+        <div className="rounded-xl border border-border bg-card p-4 text-xs text-muted-foreground">
           {t('pbl.v2.submission.noActiveTask')}
         </div>
       )}
@@ -750,7 +752,7 @@ function SubmissionHistory({
 }) {
   const { t } = useI18n();
   return (
-    <div className="rounded-xl border border-cyan-100/[0.12] bg-slate-800/[0.38] p-3">
+    <div className="rounded-xl border border-border bg-card p-3">
       <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">
         {t('pbl.v2.submission.submissionHistory')}
       </div>
@@ -771,7 +773,7 @@ function SubmissionHistory({
                 title={
                   viewable ? t('pbl.v2.submission.viewSubmission') : t('pbl.v2.submission.download')
                 }
-                className="w-full rounded-lg border border-cyan-100/[0.12] bg-slate-700/[0.32] px-2.5 py-1.5 text-left text-[11px] leading-snug text-foreground/80 transition-colors hover:bg-slate-700/[0.46] focus:outline-none focus:ring-1 focus:ring-primary/40"
+                className="w-full rounded-lg border border-border bg-card px-2.5 py-1.5 text-left text-[11px] leading-snug text-foreground/80 transition-colors hover:bg-card focus:outline-none focus:ring-1 focus:ring-primary/40"
               >
                 <div className="flex items-center gap-1.5">
                   {isImageSub ? (
@@ -831,16 +833,16 @@ function SubmissionViewer({
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/48 p-4 backdrop-blur-md"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[#453526]/35 p-4 backdrop-blur-md"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="flex max-h-[85vh] w-full max-w-2xl flex-col rounded-2xl border border-cyan-100/[0.14] bg-background shadow-[0_24px_70px_rgba(6,16,34,0.42)]"
+        className="flex max-h-[85vh] w-full max-w-2xl flex-col rounded-2xl border border-border bg-background shadow-[0_24px_70px_rgba(104,67,25,0.08)]"
         role="dialog"
         aria-modal="true"
         aria-label={t('pbl.v2.submission.viewSubmission')}
       >
-        <div className="flex items-center justify-between gap-3 border-b border-cyan-100/[0.12] px-5 py-4">
+        <div className="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
           <h3 className="min-w-0 flex-1 truncate text-base font-semibold leading-tight">{title}</h3>
           <button
             type="button"
@@ -866,7 +868,7 @@ function SubmissionViewer({
               <img
                 src={submission.fileUrl}
                 alt={submission.filename || 'submission'}
-                className="mx-auto max-h-[60vh] rounded-lg border border-cyan-100/[0.14] object-contain"
+                className="mx-auto max-h-[60vh] rounded-lg border border-border object-contain"
               />
               {trimmedPBLText(submission.content) && (
                 <pre className="whitespace-pre-wrap break-words font-mono text-xs leading-relaxed text-foreground/90">
@@ -1170,17 +1172,17 @@ function SubmissionModal({
   return (
     <div
       onClick={handleClose}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/48 p-4 backdrop-blur-md"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[#453526]/35 p-4 backdrop-blur-md"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="flex max-h-[85vh] w-full max-w-xl flex-col rounded-2xl border border-cyan-100/[0.14] bg-background shadow-[0_24px_70px_rgba(6,16,34,0.42)]"
+        className="flex max-h-[85vh] w-full max-w-xl flex-col rounded-2xl border border-border bg-background shadow-[0_24px_70px_rgba(104,67,25,0.08)]"
         role="dialog"
         aria-modal="true"
         aria-label={t('pbl.v2.submission.submitOutput')}
       >
         {/* Header */}
-        <div className="flex items-start justify-between gap-3 border-b border-cyan-100/[0.12] px-5 py-4">
+        <div className="flex items-start justify-between gap-3 border-b border-border px-5 py-4">
           <div className="min-w-0">
             <h3 className="text-base font-semibold leading-tight">
               {t('pbl.v2.submission.modalTitle')}
@@ -1205,7 +1207,7 @@ function SubmissionModal({
           onPaste={handlePaste}
         >
           {/* Mode toggle */}
-          <div className="inline-flex rounded-full border border-cyan-100/[0.12] bg-slate-700/[0.26] p-1">
+          <div className="inline-flex rounded-full border border-border bg-card p-1">
             {(['paste', 'file'] as const).map((m) => (
               <button
                 key={m}
@@ -1223,7 +1225,7 @@ function SubmissionModal({
           </div>
 
           {mode === 'file' && (
-            <label className="block cursor-pointer rounded-xl border border-dashed border-cyan-100/[0.14] bg-slate-700/[0.24] px-4 py-4 text-center text-xs text-muted-foreground transition-colors hover:bg-slate-700/[0.34]">
+            <label className="block cursor-pointer rounded-xl border border-dashed border-border bg-card px-4 py-4 text-center text-xs text-muted-foreground transition-colors hover:bg-card">
               <input
                 type="file"
                 accept={TEXT_PDF_IMAGE_ACCEPT}
@@ -1256,17 +1258,17 @@ function SubmissionModal({
           )}
 
           {hasImage && (
-            <div className="flex items-center gap-2.5 rounded-xl border border-cyan-100/[0.14] bg-slate-700/[0.24] p-2">
+            <div className="flex items-center gap-2.5 rounded-xl border border-border bg-card p-2">
               <img
                 src={fileUrl}
                 alt={filename}
-                className="h-14 w-14 shrink-0 rounded-md border border-cyan-100/[0.14] object-cover"
+                className="h-14 w-14 shrink-0 rounded-md border border-border object-cover"
               />
               <span className="min-w-0 flex-1 truncate text-xs text-foreground">{filename}</span>
               <button
                 type="button"
                 onClick={clearImage}
-                className="shrink-0 rounded-md p-1 text-muted-foreground transition-colors hover:bg-slate-700/[0.4] hover:text-foreground"
+                className="shrink-0 rounded-md p-1 text-muted-foreground transition-colors hover:bg-card hover:text-foreground"
                 aria-label={t('pbl.v2.submission.removeImage')}
               >
                 <X className="h-3.5 w-3.5" />
@@ -1295,7 +1297,7 @@ function SubmissionModal({
                   ? t('pbl.v2.submission.uploadPlaceholder')
                   : t('pbl.v2.submission.pastePlaceholder')
             }
-            className={`w-full resize-y rounded-xl border border-cyan-100/[0.13] bg-slate-950/[0.26] p-3 text-xs leading-relaxed text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/35 ${
+            className={`w-full resize-y rounded-xl border border-border bg-card p-3 text-xs leading-relaxed text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/35 ${
               mode === 'paste' ? 'font-mono' : ''
             }`}
           />
@@ -1321,7 +1323,7 @@ function SubmissionModal({
                   .map((s) => (
                     <li
                       key={s.id}
-                      className="rounded-lg border border-cyan-100/[0.12] bg-slate-700/[0.32] px-2.5 py-2 text-[11px] leading-snug"
+                      className="rounded-lg border border-border bg-card px-2.5 py-2 text-[11px] leading-snug"
                     >
                       <div className="flex items-center gap-1.5">
                         {s.mimeType?.startsWith('image/') ? (
@@ -1362,7 +1364,7 @@ function SubmissionModal({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-2 border-t border-cyan-100/[0.12] bg-slate-700/[0.22] px-5 py-3">
+        <div className="flex items-center justify-end gap-2 border-t border-border bg-card px-5 py-3">
           {submitLocked && (
             <span className="mr-auto text-[11px] leading-snug text-muted-foreground">
               {t('pbl.v2.submission.lockedWhileStreaming')}
@@ -1371,7 +1373,7 @@ function SubmissionModal({
           <button
             type="button"
             onClick={handleClose}
-            className="rounded-lg border border-cyan-100/[0.12] bg-slate-700/[0.24] px-3 py-1.5 text-xs transition-colors hover:bg-slate-700/[0.34]"
+            className="rounded-lg border border-border bg-card px-3 py-1.5 text-xs transition-colors hover:bg-card"
           >
             {t('pbl.v2.submission.canceling')}
           </button>

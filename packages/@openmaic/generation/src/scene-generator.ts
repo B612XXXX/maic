@@ -1832,9 +1832,12 @@ export async function generateSceneActions(
   }
 
   if (outline.type === 'pbl') {
+    const projectV2 = (content as Partial<GeneratedPBLContent>).projectV2;
+    // The short practice has its own briefing and opening line in the saved
+    // case. A second, generic PBL introduction adds latency and may invent facts.
+    if (projectV2?.courtroomPractice) return [];
     const pblConfig = outline.pblConfig;
     const agentsText = formatAgentsForPrompt(agents);
-    const projectV2 = (content as Partial<GeneratedPBLContent>).projectV2;
     const prompts = buildPrompt(PROMPT_IDS.PBL_ACTIONS, {
       title: outline.title,
       keyPoints: (outline.keyPoints || []).map((p, i) => `${i + 1}. ${p}`).join('\n'),

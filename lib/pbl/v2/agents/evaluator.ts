@@ -295,7 +295,11 @@ function persistEvaluation(args: {
       feedback: normalizeOptionalString(tail.feedback) ?? stripEvaluationTail(fullText),
       strengths: [],
       improvements: [],
-      stars: normalizeStars(tail.stars) ?? undefined,
+      stars:
+        project.scenario &&
+        (project.courtroomPractice || project.workspacePresentation === 'courtroom')
+          ? undefined
+          : (normalizeStars(tail.stars) ?? undefined),
       whatYouBuilt: normalizeStringList(tail.what_you_built, 6),
       whatYouLearned: normalizeStringList(tail.what_you_learned, 6),
       whatsNext: normalizeOptionalString(tail.whats_next) ?? undefined,

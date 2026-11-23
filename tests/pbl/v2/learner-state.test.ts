@@ -31,6 +31,9 @@ const PROJECT_FIELD_BOUNDARY = {
   languageDirective: 'design-template',
   tags: 'design-template',
   scenario: 'design-template',
+  workspacePresentation: 'design-template',
+  courtroomPractice: 'design-template',
+  workspacePresentationOverride: 'learner-state',
   schemaVersion: 'design-template',
   roles: 'design-template',
   createdAt: 'design-template',
@@ -42,6 +45,8 @@ const PROJECT_FIELD_BOUNDARY = {
 function makeProject(overrides: Partial<PBLProjectV2> = {}): PBLProjectV2 {
   return {
     uiPhase: 'hero',
+    workspacePresentation: 'standard',
+    workspacePresentationOverride: 'courtroom',
     title: 'Design-only title',
     description: 'Design-only description',
     learningObjective: 'Design-only learning objective',
@@ -238,6 +243,7 @@ describe('PBL learner state split', () => {
         setting: 'Stakeholder interview',
         characters: [{ id: 'char-1', name: 'Dana', persona: 'Project stakeholder' }],
       },
+      courtroomPractice: { caseId: 'generated', returnStageId: 'original-classroom' },
       schemaVersion: 1,
       runtimeResetEpoch: 1,
       pendingOpenTaskPriorQuizResults: [
